@@ -69,6 +69,11 @@ class InMemoryGameStore:
         self.moves: dict[str, list[dict[str, Any]]] = {}  # game_id -> [moves]
         self.persuasions: dict[str, list[dict[str, Any]]] = {}
 
+        # Performance indexes
+        self._share_code_index: dict[str, str] = {}  # share_code -> game_id (O(1) lookup)
+        self._pieces_by_game: dict[str, list[str]] = {}  # game_id -> [piece_ids]
+        self._pieces_by_square: dict[tuple[str, str], str] = {}  # (game_id, square) -> piece_id
+
     # ---- Games ----
 
     def create_game(
@@ -99,6 +104,10 @@ class InMemoryGameStore:
         self.moves[game_id] = []
         self.persuasions[game_id] = []
 
+        # Update indexes
+        self._share_code_index[share_code] = game_id
+        self._pieces_by_game[game_id] = []
+
         # Create pieces
         for p in STARTING_PIECES:
             pid = _new_id()
@@ -115,6 +124,9 @@ class InMemoryGameStore:
                 "created_at": _now_iso(),
             }
             self.pieces[pid] = piece
+            # Update indexes
+            self._pieces_by_game[game_id].append(pid)
+            self._pieces_by_square[(game_id, p["square"])] = pid
 
         # System message
         self.add_message(game_id, "system", "System", f"Game created! Mode: {game_mode}. Template: {template}.")
@@ -125,9 +137,10 @@ class InMemoryGameStore:
         return self.games.get(game_id)
 
     def get_game_by_share_code(self, code: str) -> dict[str, Any] | None:
-        for g in self.games.values():
-            if g["share_code"] == code:
-                return g
+        """Get game by share code - O(1) using hash index."""
+        game_id = self._share_code_index.get(code)
+        if game_id:
+            return self.games.get(game_id)
         return None
 
     def update_game(self, game_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
@@ -139,16 +152,47 @@ class InMemoryGameStore:
     # ---- Pieces ----
 
     def get_game_pieces(self, game_id: str) -> list[dict[str, Any]]:
-        return [p for p in self.pieces.values() if p["game_id"] == game_id]
+        """Get all pieces for a game - O(1) using hash index."""
+        piece_ids = self._pieces_by_game.get(game_id, [])
+        return [self.pieces[pid] for pid in piece_ids if pid in self.pieces]
 
     def get_piece(self, piece_id: str) -> dict[str, Any] | None:
         return self.pieces.get(piece_id)
 
     def update_piece(self, piece_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
+        """Update piece and maintain square index."""
         piece = self.pieces.get(piece_id)
         if piece:
+            # Update square index if square changed
+            if "square" in data and data["square"] != piece.get("square"):
+                old_square = piece.get("square")
+                new_square = data["square"]
+                game_id = piece["game_id"]
+
+                # Remove old index
+                if old_square:
+                    self._pieces_by_square.pop((game_id, old_square), None)
+
+                # Add new index (if not captured)
+                if new_square and not data.get("is_captured", piece.get("is_captured")):
+                    self._pieces_by_square[(game_id, new_square)] = piece_id
+
+            # If piece is captured, remove from square index
+            if data.get("is_captured") and not piece.get("is_captured"):
+                game_id = piece["game_id"]
+                square = piece.get("square")
+                if square:
+                    self._pieces_by_square.pop((game_id, square), None)
+
             piece.update(data)
         return piece
+
+    def get_piece_at_square(self, game_id: str, square: str) -> dict[str, Any] | None:
+        """Get piece at a specific square - O(1) using hash index."""
+        piece_id = self._pieces_by_square.get((game_id, square))
+        if piece_id:
+            return self.pieces.get(piece_id)
+        return None
 
     # ---- Chat Messages ----
 

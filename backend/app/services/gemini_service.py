@@ -7,10 +7,11 @@ when the Gemini API is unavailable.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Callable
 
 from app.models.ai_models import (
     CustomPieceInput,
@@ -24,6 +25,8 @@ from app.models.ai_models import (
     TauntInput,
     TauntOutput,
 )
+from app.services.ai_cost_tracker import ai_cost_tracker
+from app.services.ai_rate_limiter import ai_rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +132,72 @@ class GeminiService:
         self._persuasion_agent = None
         self._taunt_agent = None
         self._custom_piece_agent = None
+        self.rate_limiter = ai_rate_limiter
+        self.cost_tracker = ai_cost_tracker
         self._try_init_agents()
+
+    async def _call_with_retry(
+        self,
+        func: Callable,
+        *args,
+        max_retries: int = 2,
+        **kwargs,
+    ) -> Any:
+        """
+        Call function with exponential backoff retry.
+
+        Args:
+            func: Async function to call
+            args: Positional arguments
+            max_retries: Maximum retry attempts (default: 2)
+            kwargs: Keyword arguments
+
+        Returns:
+            Function result
+
+        Raises:
+            Last exception if all retries fail
+        """
+        for attempt in range(max_retries + 1):
+            try:
+                return await func(*args, **kwargs)
+            except TimeoutError as exc:
+                if attempt == max_retries:
+                    logger.error("Gemini API timeout after %s attempts", attempt + 1)
+                    raise
+                wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s
+                logger.warning(
+                    "Gemini API timeout (attempt %s/%s), retrying in %ss",
+                    attempt + 1,
+                    max_retries + 1,
+                    wait_time,
+                )
+                await asyncio.sleep(wait_time)
+            except Exception as exc:
+                # For other errors, check if it's a retryable HTTP error
+                if hasattr(exc, "response") and hasattr(exc.response, "status_code"):
+                    status_code = exc.response.status_code
+                    if status_code >= 500 or status_code == 429:
+                        # Server errors and rate limits are retryable
+                        if attempt == max_retries:
+                            logger.error(
+                                "Gemini API error %s after %s attempts",
+                                status_code,
+                                attempt + 1,
+                            )
+                            raise
+                        wait_time = 2 ** attempt
+                        logger.warning(
+                            "Gemini API error %s (attempt %s/%s), retrying in %ss",
+                            status_code,
+                            attempt + 1,
+                            max_retries + 1,
+                            wait_time,
+                        )
+                        await asyncio.sleep(wait_time)
+                        continue
+                # Non-retryable error
+                raise
 
     def _try_init_agents(self) -> None:
         """Try to initialize Pydantic AI agents. Falls back gracefully."""
@@ -226,9 +294,22 @@ class GeminiService:
         is_risky: bool,
         will_move: bool,
         capture_target: str | None = None,
+        game_id: str | None = None,
+        move_number: int = 0,
     ) -> PieceResponseOutput:
         """Generate a piece's response to a move command."""
         if self._agents_initialized and self._piece_agent:
+            # Check rate limit
+            if game_id:
+                allowed, error_msg = self.rate_limiter.check_and_increment(
+                    game_id, move_number, "piece_response"
+                )
+                if not allowed:
+                    logger.info("Rate limit hit: %s", error_msg)
+                    return self._fallback_piece_response(
+                        piece_type, morale, will_move, is_risky
+                    )
+
             try:
                 input_data = PieceResponseInput(
                     piece_type=piece_type,
@@ -240,10 +321,41 @@ class GeminiService:
                     is_risky=is_risky,
                     capture_target=capture_target,
                 )
-                result = await self._piece_agent.run(input_data.model_dump_json())
+
+                # Call with retry
+                result = await self._call_with_retry(
+                    self._piece_agent.run, input_data.model_dump_json()
+                )
+
+                # Track costs (approximate token counts based on input/output length)
+                if game_id and result:
+                    input_tokens = len(input_data.model_dump_json()) // 4
+                    output_tokens = len(str(result.data)) // 4
+                    self.cost_tracker.record_usage(
+                        game_id, input_tokens, output_tokens, "piece_response"
+                    )
+
                 return result.data
+
+            except TimeoutError:
+                logger.error("Gemini API timeout for piece response — using fallback")
+            except ValueError as exc:
+                logger.error("Invalid Gemini response: %s — using fallback", exc)
             except Exception as exc:
-                logger.warning("AI piece response failed: %s — using fallback", exc)
+                if hasattr(exc, "response") and hasattr(exc.response, "status_code"):
+                    status_code = exc.response.status_code
+                    if status_code == 429:
+                        logger.warning("Gemini rate limit hit — using fallback")
+                    elif status_code >= 500:
+                        logger.error(
+                            "Gemini server error %s — using fallback", status_code
+                        )
+                    else:
+                        logger.error(
+                            "Gemini API error %s — using fallback", status_code
+                        )
+                else:
+                    logger.warning("AI piece response failed: %s — using fallback", exc)
 
         return self._fallback_piece_response(piece_type, morale, will_move, is_risky)
 

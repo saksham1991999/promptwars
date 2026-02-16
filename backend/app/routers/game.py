@@ -33,6 +33,7 @@ from app.models.game_models import (
     PiecePersonality,
     PlayerSummary,
 )
+from app.data.piece_templates import get_piece_accept_text, get_piece_refuse_text
 from app.services.chess_engine import ChessEngine
 from app.services.morale_calculator import MoraleCalculator
 
@@ -247,10 +248,10 @@ async def issue_command(
 
     # AI piece response (use fallback — no Gemini needed for demo)
     if will_move:
-        response_text = _piece_accept_text(piece_type, request.target_square)
+        response_text = get_piece_accept_text(piece_type, request.target_square)
         morale_change = 3
     else:
-        response_text = _piece_refuse_text(piece_type, morale)
+        response_text = get_piece_refuse_text(piece_type, morale)
         morale_change = -2
 
     msg_type = "piece_response" if will_move else "piece_refusal"
@@ -564,86 +565,3 @@ async def get_moves(game_id: str):
     """Get move history for a game."""
     moves = store.get_moves(game_id)
     return {"moves": moves}
-
-
-# ---------------------------------------------------------------------------
-# Piece response templates (fallback, no Gemini needed)
-# ---------------------------------------------------------------------------
-
-import random
-
-_ACCEPT_TEMPLATES: dict[str, list[str]] = {
-    "pawn": [
-        "For the king! I march to {sq}!",
-        "Yes sir! Moving to {sq} right away!",
-        "One step closer to glory... heading to {sq}!",
-    ],
-    "knight": [
-        "*leaps dramatically* To {sq}! Watch this!",
-        "CHARGE! {sq}, here I come!",
-        "A daring move to {sq}? I love it!",
-    ],
-    "bishop": [
-        "A logical choice. Repositioning to {sq}.",
-        "I see the diagonal. Moving to {sq} as planned.",
-        "Calculated. {sq} provides excellent coverage.",
-    ],
-    "rook": [
-        "Acknowledged. Moving to {sq}, sir.",
-        "Orders received. Deploying to {sq}.",
-        "Affirmative. {sq}. Consider it done.",
-    ],
-    "queen": [
-        "About time I got involved. {sq} it is.",
-        "*adjusts crown* Fine, {sq}. You're welcome.",
-        "Moving to {sq}. This better be worth it.",
-    ],
-    "king": [
-        "I hope you know what you're doing... moving to {sq}.",
-        "Is it safe? ...Fine, {sq}.",
-        "Moving to {sq}. Please protect me!",
-    ],
-}
-
-_REFUSE_TEMPLATES: dict[str, list[str]] = {
-    "pawn": [
-        "I-I don't think I should... it looks scary over there!",
-        "My morale is too low... I can barely move!",
-        "Please don't make me go... not yet!",
-    ],
-    "knight": [
-        "Even I have limits! That's suicide!",
-        "No way! I'm bold, not stupid!",
-        "I refuse! My glory days aren't ending here!",
-    ],
-    "bishop": [
-        "I've analyzed the position. The answer is no.",
-        "Strategically inadvisable. I must decline.",
-        "My analysis suggests this is a terrible idea.",
-    ],
-    "rook": [
-        "Negative. That order would compromise the position.",
-        "I cannot comply. The risk is unacceptable.",
-        "Standing down. That's not a defensible position.",
-    ],
-    "queen": [
-        "Excuse me? I'm not walking into that trap.",
-        "I think NOT. My life is worth more than that.",
-        "Hard pass. Find someone else to sacrifice.",
-    ],
-    "king": [
-        "ABSOLUTELY NOT! Are you trying to get me killed?!",
-        "I'm the King! I refuse that reckless move!",
-        "No! My safety is paramount!",
-    ],
-}
-
-
-def _piece_accept_text(piece_type: str, target_square: str) -> str:
-    templates = _ACCEPT_TEMPLATES.get(piece_type, _ACCEPT_TEMPLATES["pawn"])
-    return random.choice(templates).format(sq=target_square)
-
-
-def _piece_refuse_text(piece_type: str, morale: int) -> str:
-    templates = _REFUSE_TEMPLATES.get(piece_type, _REFUSE_TEMPLATES["pawn"])
-    return random.choice(templates)
