@@ -6,14 +6,11 @@ import glob
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-# Supabase project details
-PROJECT_REF = "inhvcajyddrnbexgpbxy"
-DB_HOST = f"db.{PROJECT_REF}.supabase.co"
-DB_NAME = "postgres"
-DB_USER = "postgres"
-DB_PORT = "5432"
-
-# Get password from environment or prompt
+# Database connection - read from environment variables
+DB_HOST = os.environ.get("SUPABASE_DB_HOST", "localhost")
+DB_NAME = os.environ.get("SUPABASE_DB_NAME", "postgres")
+DB_USER = os.environ.get("SUPABASE_DB_USER", "postgres")
+DB_PORT = os.environ.get("SUPABASE_DB_PORT", "5432")
 DB_PASSWORD = os.environ.get("SUPABASE_DB_PASSWORD")
 
 if not DB_PASSWORD:

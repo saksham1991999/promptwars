@@ -264,7 +264,8 @@ async def issue_command(
     board_state = BoardState(fen=game["fen"], turn=game["turn"], is_check=engine.is_check)
 
     if will_move:
-        # Execute move
+        # Execute move — capture original square before updating piece position
+        original_square = piece["square"]
         move_result = engine.make_move_from_squares(piece["square"], request.target_square)
         new_fen = move_result["fen_after"]
         new_turn = "black" if current_turn == "white" else "white"
@@ -321,7 +322,7 @@ async def issue_command(
             is_checkmate=engine.is_checkmate,
             is_stalemate=engine.is_stalemate,
             last_move=MoveData(
-                from_square=piece["square"],
+                from_square=original_square,
                 to_square=request.target_square,
                 san=validation["san"],
                 piece_type=piece_type,
@@ -349,7 +350,7 @@ async def issue_command(
         if engine.is_check:
             trigger = "check"
         taunt = KingTauntGenerator.generate_taunt(
-            trigger, move_number, engine.get_material_balance(),
+            trigger, engine.get_material_balance(), move_number,
             piece_type,
         )
         if taunt:
@@ -439,6 +440,7 @@ async def persuade_piece(
     board_state = None
 
     if success and validation.get("legal"):
+        original_square = piece["square"]
         move_result = engine.make_move_from_squares(piece["square"], request.target_square)
         new_fen = move_result["fen_after"]
         new_turn = "black" if game["turn"] == "white" else "white"
@@ -480,7 +482,7 @@ async def persuade_piece(
             is_checkmate=engine.is_checkmate,
             is_stalemate=engine.is_stalemate,
             last_move=MoveData(
-                from_square=piece["square"],
+                from_square=original_square,
                 to_square=request.target_square,
                 san=validation["san"],
                 piece_type=piece["piece_type"],

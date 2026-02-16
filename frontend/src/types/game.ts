@@ -107,7 +107,7 @@ export interface ChatMessage {
     content: string;
     metadata: {
         sending?: boolean;
-        [key: string]: any;
+        [key: string]: unknown;
     };
     created_at: string;
 }

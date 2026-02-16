@@ -9,13 +9,13 @@ export const createMockChannel = (channelName: string): MockRealtimeChannel => {
   const channel: MockRealtimeChannel = {
     topic: channelName,
     callback: null,
-    on: vi.fn((event, config, callback) => {
+    on: vi.fn((event: string, config: Record<string, unknown>, callback: (...args: unknown[]) => void) => {
       if (event === 'postgres_changes' && typeof callback === 'function') {
         channel.callback = callback as (payload: RealtimePostgresChangesPayload<unknown>) => void
       }
       return channel
     }),
-    subscribe: vi.fn((callback) => {
+    subscribe: vi.fn((callback?: (status: string, err?: unknown) => void) => {
       if (callback) callback('SUBSCRIBED', undefined)
       return channel
     }),
@@ -59,7 +59,7 @@ export const mockSupabaseClient = {
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     csv: vi.fn().mockResolvedValue({ data: null, error: null }),
-    then: vi.fn((callback) => callback({ data: [], error: null })),
+    then: vi.fn((callback: (result: { data: unknown[]; error: null }) => unknown) => callback({ data: [], error: null })),
   })),
   channel: vi.fn((name: string) => createMockChannel(name)),
   removeChannel: vi.fn(),

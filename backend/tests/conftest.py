@@ -57,10 +57,10 @@ def game_store() -> InMemoryGameStore:
     store = InMemoryGameStore()
     yield store
     # Cleanup after test
-    store._games.clear()
-    store._pieces.clear()
-    store._moves.clear()
-    store._messages.clear()
+    store.games.clear()
+    store.pieces.clear()
+    store.moves.clear()
+    store.messages.clear()
 
 
 @pytest.fixture

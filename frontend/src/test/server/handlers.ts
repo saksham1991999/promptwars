@@ -16,7 +16,7 @@ export const handlers = [
   }),
 
   // Create game
-  http.post(`${API_BASE}/games`, async ({ request }) => {
+  http.post(`${API_BASE}/games`, async ({ request }: { request: Request }) => {
     const body = await request.json() as { game_mode: string; template: string; settings?: Record<string, unknown> }
     const game = createGame({
       game_mode: body.game_mode as 'pvp' | 'pvai',
@@ -33,7 +33,7 @@ export const handlers = [
   }),
 
   // Get game
-  http.get(`${API_BASE}/games/:id`, ({ params }) => {
+  http.get(`${API_BASE}/games/:id`, ({ params }: { params: Record<string, string> }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -42,7 +42,7 @@ export const handlers = [
   }),
 
   // Join by share code
-  http.post(`${API_BASE}/games/join-by-code`, async ({ request }) => {
+  http.post(`${API_BASE}/games/join-by-code`, async ({ request }: { request: Request }) => {
     const body = await request.json() as { share_code: string }
     const game = Array.from(games.values()).find(g => g.share_code === body.share_code)
     if (!game) {
@@ -52,7 +52,7 @@ export const handlers = [
   }),
 
   // Issue command
-  http.post(`${API_BASE}/games/:id/command`, async ({ params, request }) => {
+  http.post(`${API_BASE}/games/:id/command`, async ({ params, request }: { params: Record<string, string>; request: Request }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -92,7 +92,7 @@ export const handlers = [
   }),
 
   // Persuade piece
-  http.post(`${API_BASE}/games/:id/persuade`, async ({ params }) => {
+  http.post(`${API_BASE}/games/:id/persuade`, async ({ params }: { params: Record<string, string> }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -118,7 +118,7 @@ export const handlers = [
   }),
 
   // Resign game
-  http.post(`${API_BASE}/games/:id/resign`, ({ params }) => {
+  http.post(`${API_BASE}/games/:id/resign`, ({ params }: { params: Record<string, string> }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -127,7 +127,7 @@ export const handlers = [
   }),
 
   // Offer draw
-  http.post(`${API_BASE}/games/:id/draw-offer`, ({ params }) => {
+  http.post(`${API_BASE}/games/:id/draw-offer`, ({ params }: { params: Record<string, string> }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -136,7 +136,7 @@ export const handlers = [
   }),
 
   // Respond to draw
-  http.post(`${API_BASE}/games/:id/draw-respond`, async ({ params, request }) => {
+  http.post(`${API_BASE}/games/:id/draw-respond`, async ({ params, request }: { params: Record<string, string>; request: Request }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -150,7 +150,7 @@ export const handlers = [
   }),
 
   // Get moves
-  http.get(`${API_BASE}/games/:id/moves`, ({ params }) => {
+  http.get(`${API_BASE}/games/:id/moves`, ({ params }: { params: Record<string, string> }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -162,7 +162,7 @@ export const handlers = [
   }),
 
   // Get chat history
-  http.get(`${API_BASE}/games/:id/chat`, ({ params, request }) => {
+  http.get(`${API_BASE}/games/:id/chat`, ({ params, request }: { params: Record<string, string>; request: Request }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })
@@ -185,7 +185,7 @@ export const handlers = [
   }),
 
   // Send chat message
-  http.post(`${API_BASE}/games/:id/chat`, async ({ params, request }) => {
+  http.post(`${API_BASE}/games/:id/chat`, async ({ params, request }: { params: Record<string, string>; request: Request }) => {
     const game = games.get(params.id as string)
     if (!game) {
       return HttpResponse.json({ detail: 'Game not found' }, { status: 404 })

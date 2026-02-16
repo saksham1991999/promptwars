@@ -1,4 +1,4 @@
-import React, { ReactElement } from 'react'
+import React, { type ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 

@@ -108,7 +108,7 @@ export const createPieces = (overrides: PieceOverrides[] = []): GamePiece[] => {
   return STANDARD_PIECE_SETUP.map((setup, index) =>
     createPiece({
       id: `piece-${index}`,
-      type: setup.type,
+      piece_type: setup.type,
       color: setup.color,
       square: setup.square,
     })

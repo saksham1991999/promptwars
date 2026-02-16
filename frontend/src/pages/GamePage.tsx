@@ -274,7 +274,7 @@ export default function GamePage() {
         try {
             await api.offerDraw(game.id);
             showToast('Draw offer sent', 'info');
-        } catch (err) {
+        } catch {
             showToast('Failed to offer draw', 'error');
         }
     };

@@ -36,9 +36,9 @@ export default class ErrorBoundary extends Component<Props, State> {
         // Log to Sentry in production
         if (import.meta.env.PROD) {
             // Sentry will be initialized in main.tsx
-            // @ts-ignore - Sentry is optional
+            // @ts-expect-error - Sentry is optional
             if (window.Sentry) {
-                // @ts-ignore
+                // @ts-expect-error - Sentry is dynamically attached
                 window.Sentry.captureException(error, {
                     contexts: {
                         react: {

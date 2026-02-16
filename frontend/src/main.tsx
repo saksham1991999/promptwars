@@ -15,7 +15,7 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
             replaysOnErrorSampleRate: 1.0,
         });
         // Make Sentry available globally for ErrorBoundary
-        // @ts-ignore
+        // @ts-expect-error - Sentry is dynamically attached to window
         window.Sentry = Sentry;
     });
 }

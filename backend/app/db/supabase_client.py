@@ -12,7 +12,7 @@ from app.core.config import settings
 @lru_cache(maxsize=1)
 def get_supabase_client() -> Client:
     """Get or create the Supabase client singleton (secret key / service role)."""
-    return create_client(settings.supabase_url, settings.supabase_secret_key)
+    return create_client(settings.supabase_url, settings.supabase_secret_key.get_secret_value())
 
 
 @lru_cache(maxsize=1)
