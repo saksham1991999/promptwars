@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.middleware.rate_limiter import RateLimitMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -39,11 +40,18 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Rate Limiting
+# ---------------------------------------------------------------------------
+if settings.rate_limit_enabled:
+    app.add_middleware(RateLimitMiddleware)
+    logger.info("Rate limiting enabled")
 
 # ---------------------------------------------------------------------------
 # Routers

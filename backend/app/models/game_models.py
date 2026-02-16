@@ -81,19 +81,19 @@ class CreateGameRequest(BaseModel):
 
 
 class JoinGameRequest(BaseModel):
-    share_code: str
+    share_code: str = Field(max_length=12, pattern=r"^[A-Z0-9]{6,12}$")
 
 
 class CommandRequest(BaseModel):
-    piece_id: str
-    target_square: str
-    message: str | None = None
+    piece_id: str = Field(max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
+    target_square: str = Field(max_length=2, pattern=r"^[a-h][1-8]$")
+    message: str | None = Field(default=None, max_length=500)
 
 
 class PersuasionRequest(BaseModel):
-    piece_id: str
-    target_square: str
-    argument: str
+    piece_id: str = Field(max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
+    target_square: str = Field(max_length=2, pattern=r"^[a-h][1-8]$")
+    argument: str = Field(max_length=500)
     is_voice: bool = False
 
 

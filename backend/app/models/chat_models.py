@@ -20,7 +20,7 @@ class ChatMessage(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    content: str
+    content: str = Field(max_length=1000)
     message_type: str = "player_message"
 
 
