@@ -1,5 +1,5 @@
 /* =========================================================================
-   PromptWars Design System — CSS Variables, Typography, Spacing
+   Chess Alive Design System — CSS Variables, Typography, Spacing
    ========================================================================= */
 
 /* --- Google Fonts Import --- */
@@ -7,83 +7,87 @@
 
 /* --- CSS Custom Properties --- */
 :root {
-  /* Color Palette — Dark Mode First */
+  /* Foundation Colors - Refined dark theme with subtle blue tints */
+  --bg-base: #050508;
   --bg-primary: #0a0a0f;
   --bg-secondary: #12121a;
   --bg-tertiary: #1a1a2e;
-  --bg-elevated: #16213e;
-  --bg-card: rgba(22, 33, 62, 0.6);
-  --bg-glass: rgba(255, 255, 255, 0.03);
 
-  --surface-1: #1e1e30;
-  --surface-2: #252540;
-  --surface-3: #2d2d50;
-  --surface-hover: rgba(255, 255, 255, 0.06);
+  /* Surface Elevation System (6 levels for depth) */
+  --surface-0: rgba(255, 255, 255, 0.02);
+  --surface-1: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: rgba(255, 255, 255, 0.08);
+  --surface-4: rgba(255, 255, 255, 0.12);
+  --surface-5: rgba(255, 255, 255, 0.16);
 
-  /* Brand Colors */
-  --accent-primary: #6c63ff;
-  --accent-primary-hover: #8b85ff;
-  --accent-primary-glow: rgba(108, 99, 255, 0.3);
-  --accent-secondary: #e94560;
-  --accent-secondary-hover: #ff6b81;
-  --accent-tertiary: #0f3460;
+  /* Accent Colors - Refined indigo to purple gradient */
+  --primary-400: #818cf8;
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;
+  --primary-700: #4338ca;
 
-  /* Chess Colors */
-  --chess-white: #f0d9b5;
-  --chess-white-highlight: #f7ec73;
-  --chess-black: #b58863;
-  --chess-black-highlight: #daa520;
-  --chess-move-hint: rgba(108, 99, 255, 0.4);
-  --chess-check: rgba(233, 69, 96, 0.5);
-  --chess-last-move: rgba(108, 99, 255, 0.25);
+  --secondary-400: #f87171;
+  --secondary-500: #ef4444;
+  --secondary-600: #dc2626;
 
-  /* Morale Colors */
-  --morale-high: #00e676;
-  --morale-normal: #66bb6a;
-  --morale-medium: #ffa726;
-  --morale-low: #ef5350;
-  --morale-critical: #d32f2f;
+  /* Semantic Colors */
+  --success-500: #10b981;
+  --success-600: #059669;
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+
+  /* Morale Colors (Enhanced) */
+  --morale-high: #10b981;
+  --morale-normal: #3b82f6;
+  --morale-medium: #f59e0b;
+  --morale-low: #f97316;
+  --morale-critical: #ef4444;
+
+  /* Chess Board Premium Colors */
+  --chess-light: #e8d5b7;
+  --chess-dark: #a67c52;
+  --chess-highlight: rgba(99, 102, 241, 0.3);
+  --chess-legal: rgba(16, 185, 129, 0.2);
+  --chess-capture: rgba(239, 68, 68, 0.2);
+  --chess-check: rgba(239, 68, 68, 0.5);
 
   /* Text Colors */
-  --text-primary: #e8e8f0;
-  --text-secondary: #a0a0b8;
-  --text-tertiary: #6a6a80;
-  --text-accent: #6c63ff;
-  --text-on-accent: #ffffff;
-  --text-error: #ef5350;
-  --text-success: #66bb6a;
-  --text-warning: #ffa726;
-
-  /* Border Colors */
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.15);
-  --border-focus: var(--accent-primary);
-  --border-error: var(--accent-secondary);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
 
   /* Typography */
   --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 2rem;
-  --text-4xl: 2.5rem;
-  --text-5xl: 3.5rem;
+  /* Display Typography */
+  --text-hero: 4rem;        /* 64px - Homepage hero */
+  --text-4xl: 3rem;         /* 48px - Page titles */
+  --text-3xl: 2.25rem;      /* 36px - Section headers */
+  --text-2xl: 1.875rem;     /* 30px - Card titles */
+  --text-xl: 1.5rem;        /* 24px - Subsections */
 
-  --leading-tight: 1.2;
-  --leading-normal: 1.5;
-  --leading-relaxed: 1.7;
+  /* Body Typography */
+  --text-lg: 1.125rem;      /* 18px - Large body */
+  --text-base: 1rem;        /* 16px - Default */
+  --text-sm: 0.875rem;      /* 14px - Small text */
+  --text-xs: 0.75rem;       /* 12px - Captions */
 
-  --font-light: 300;
-  --font-regular: 400;
+  /* Font Weights */
+  --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
-  --font-black: 900;
+
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -99,18 +103,25 @@
   --space-20: 5rem;
 
   /* Borders & Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
+  --radius-2xl: 32px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px var(--accent-primary-glow);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.3);
+  /* Multi-layer shadows for depth */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.5), 0 10px 20px rgba(0, 0, 0, 0.6);
+
+  /* Colored glows for interactive elements */
+  --glow-primary: 0 0 20px rgba(99, 102, 241, 0.4), 0 0 40px rgba(99, 102, 241, 0.2);
+  --glow-success: 0 0 20px rgba(16, 185, 129, 0.4);
+  --glow-danger: 0 0 20px rgba(239, 68, 68, 0.5);
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -170,35 +181,56 @@ body {
 
 /* --- Focus Ring --- */
 :focus-visible {
-  outline: 2px solid var(--accent-primary);
+  outline: 2px solid var(--primary-500);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* --- Link Styles --- */
 a {
-  color: var(--accent-primary);
+  color: var(--primary-500);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
-a:hover { color: var(--accent-primary-hover); }
+a:hover { color: var(--primary-400); }
 
 /* --- Selection --- */
 ::selection {
-  background: var(--accent-primary);
-  color: var(--text-on-accent);
+  background: var(--primary-500);
+  color: #ffffff;
+}
+
+/* --- Reduced Motion Support --- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* --- Utility: Glassmorphism --- */
 .glass {
-  background: var(--bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.glass-frosted {
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
 }
 
 /* --- Utility: Gradient Text --- */
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

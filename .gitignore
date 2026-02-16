@@ -1,8 +1,12 @@
 # Dependencies
 node_modules/
+venv/
 .venv/
+env/
+ENV/
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
 # Build
 dist/
@@ -19,12 +23,22 @@ build/
 .vscode/
 *.swp
 *.swo
+*~
 .DS_Store
 
 # Testing
 coverage/
+.coverage.*
 .pytest_cache/
 htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Type Checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # Logs
 *.log

@@ -10,40 +10,64 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.logging_config import setup_logging
 from app.middleware.rate_limiter import RateLimitMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.request_id import RequestIDMiddleware
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper(), logging.INFO),
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-)
+# Configure structured logging
+setup_logging()
 logger = logging.getLogger(__name__)
+
+# Initialize Sentry for error tracking
+if settings.sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        traces_sample_rate=1.0 if settings.environment == "development" else 0.1,
+        profiles_sample_rate=0.1 if settings.environment == "production" else 0,
+        integrations=[FastApiIntegration()],
+    )
+    logger.info("Sentry error tracking initialized")
+else:
+    logger.warning("Sentry DSN not configured - error tracking disabled")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown events."""
-    logger.info("PromptWars API starting up (env=%s)", settings.environment)
+    logger.info("Chess Alive API starting up (env=%s)", settings.environment)
     yield
-    logger.info("PromptWars API shutting down")
+    logger.info("Chess Alive API shutting down")
 
 
 app = FastAPI(
-    title="PromptWars API",
+    title="Chess Alive API",
     description="Chess with AI personalities — move command, persuasion, morale, and analysis API",
     version="1.0.0",
     lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
-# CORS
+# Middleware (order matters: first added = outermost = runs first)
 # ---------------------------------------------------------------------------
+
+# 1. Request ID (for tracing)
+app.add_middleware(RequestIDMiddleware)
+
+# 2. Security Headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 3. CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-Session-ID", "X-Request-ID"],
 )
 
 # ---------------------------------------------------------------------------
@@ -86,15 +110,90 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "ok", "version": "1.0.0", "environment": settings.environment}
+    """
+    Comprehensive health check endpoint.
+
+    Checks:
+    - Database connectivity (Supabase)
+    - Redis connectivity (if configured)
+    - Gemini API key configuration
+
+    Returns 503 if any critical service is unhealthy.
+    """
+    checks: dict[str, Any] = {
+        "status": "ok",
+        "version": "1.0.0",
+        "environment": settings.environment,
+        "checks": {},
+    }
+
+    # Database check (Supabase)
+    try:
+        from app.db.supabase_store import store
+
+        if await store.health_check():
+            checks["checks"]["database"] = "ok"
+        else:
+            checks["checks"]["database"] = "error"
+            checks["status"] = "degraded"
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        checks["checks"]["database"] = "error"
+        checks["status"] = "degraded"
+
+    # Redis check (if configured)
+    if settings.rate_limit_redis_url:
+        try:
+            import redis
+
+            r = redis.from_url(settings.rate_limit_redis_url, socket_connect_timeout=2)
+            r.ping()
+            checks["checks"]["redis"] = "ok"
+        except Exception as e:
+            logger.error(f"Redis health check failed: {e}")
+            checks["checks"]["redis"] = "error"
+            checks["status"] = "degraded"
+    else:
+        checks["checks"]["redis"] = "not_configured"
+
+    # Gemini API check (non-blocking)
+    checks["checks"]["gemini_api"] = "ok" if settings.google_gemini_api_key else "not_configured"
+
+    # Sentry check
+    checks["checks"]["sentry"] = "ok" if settings.sentry_dsn else "not_configured"
+
+    # PostHog check
+    checks["checks"]["posthog"] = "ok" if settings.posthog_api_key else "not_configured"
+
+    status_code = 200 if checks["status"] == "ok" else 503
+    return JSONResponse(content=checks, status_code=status_code)
+
+
+@app.get("/readiness")
+async def readiness_check():
+    """
+    Readiness check for Kubernetes/Cloud Run.
+
+    Similar to health check but returns 503 if not ready to serve traffic.
+    """
+    try:
+        from app.db.supabase_store import store
+
+        if await store.health_check():
+            return {"status": "ready"}
+        return JSONResponse(
+            content={"status": "not_ready", "reason": "database_unavailable"}, status_code=503
+        )
+    except Exception as e:
+        logger.error(f"Readiness check failed: {e}")
+        return JSONResponse(content={"status": "not_ready", "reason": str(e)}, status_code=503)
 
 
 @app.get("/api/v1")
 async def api_root():
     """API root — returns available endpoints."""
     return {
-        "message": "Welcome to PromptWars API",
+        "message": "Welcome to Chess Alive API",
         "version": "1.0.0",
         "docs": "/docs",
         "endpoints": {

@@ -1,4 +1,4 @@
-/** TypeScript type definitions for PromptWars game entities */
+/** TypeScript type definitions for Chess Alive game entities */
 
 // ---- Piece & Personality Types ----
 
@@ -102,9 +102,13 @@ export type MessageType =
 export interface ChatMessage {
     id: string;
     message_type: MessageType;
+    sender_id?: string;
     sender_name: string;
     content: string;
-    metadata: Record<string, unknown>;
+    metadata: {
+        sending?: boolean;
+        [key: string]: any;
+    };
     created_at: string;
 }
 

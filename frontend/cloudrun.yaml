@@ -1,0 +1,62 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: chess-alive-frontend
+  labels:
+    cloud.googleapis.com/location: us-central1
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Autoscaling
+        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/maxScale: '20'
+        # CPU is only allocated during request processing
+        run.googleapis.com/cpu-throttling: 'true'
+    spec:
+      # High concurrency for static content serving
+      containerConcurrency: 250
+      # Shorter timeout for static content
+      timeoutSeconds: 60
+
+      containers:
+      - name: frontend
+        image: gcr.io/PROJECT_ID/chess-alive-frontend:latest
+
+        ports:
+        - name: http1
+          containerPort: 80
+
+        # Resource limits (lightweight for nginx)
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: '500m'
+          requests:
+            memory: 128Mi
+            cpu: '50m'
+
+        # Startup probe
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 0
+          periodSeconds: 3
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 10  # 30 seconds total
+
+        # Liveness probe
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 0
+          periodSeconds: 20
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3

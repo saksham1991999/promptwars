@@ -1,6 +1,7 @@
 /** Chess Board component — renders an interactive 8×8 board with pieces */
 import { useMemo } from 'react';
 import type { GamePiece, PieceColor } from '../types/game';
+import { useGameStore } from '../stores/gameStore';
 
 // Unicode chess piece symbols
 const PIECE_SYMBOLS: Record<string, Record<PieceColor, string>> = {
@@ -20,8 +21,6 @@ interface ChessBoardProps {
     playerColor: PieceColor;
     lastMove?: { from_square: string; to_square: string } | null;
     checkSquare?: string | null;
-    legalMoves?: string[];
-    selectedSquare: string | null;
     onSquareClick: (square: string) => void;
 }
 
@@ -30,10 +29,12 @@ export default function ChessBoard({
     playerColor,
     lastMove,
     checkSquare,
-    legalMoves = [],
-    selectedSquare,
     onSquareClick,
 }: ChessBoardProps) {
+    // Get selected square and legal moves from store
+    const selectedSquare = useGameStore((state) => state.selectedSquare);
+    const legalMoves = useGameStore((state) => state.legalMoves);
+
     // Build piece lookup map
     const pieceMap = useMemo(() => {
         const map = new Map<string, GamePiece>();
@@ -48,6 +49,13 @@ export default function ChessBoard({
     // Determine ranks/files order based on player color
     const ranksDisplay = playerColor === 'white' ? RANKS : [...RANKS].reverse();
     const filesDisplay = playerColor === 'white' ? FILES : [...FILES].reverse();
+
+    // Get morale-based glow for pieces
+    const getPieceGlow = (morale: number): string => {
+        if (morale >= 80) return 'var(--glow-success)';
+        if (morale <= 20) return 'var(--glow-danger)';
+        return 'none';
+    };
 
     return (
         <div className="chess-board-container">
@@ -94,9 +102,17 @@ export default function ChessBoard({
                                         {file}
                                     </span>
                                 )}
-                                {/* Piece */}
+                                {/* Piece with morale glow */}
                                 {piece && (
-                                    <span className="chess-piece" role="img" aria-label={`${piece.color} ${piece.piece_type}`}>
+                                    <span
+                                        className="chess-piece"
+                                        role="img"
+                                        aria-label={`${piece.color} ${piece.piece_type}, morale ${piece.morale}%`}
+                                        style={{
+                                            filter: `drop-shadow(${getPieceGlow(piece.morale)})`,
+                                            transition: 'filter 0.3s ease',
+                                        }}
+                                    >
                                         {PIECE_SYMBOLS[piece.piece_type]?.[piece.color] || '?'}
                                     </span>
                                 )}

@@ -1,4 +1,4 @@
-"""Chat router — chat history and message sending (in-memory store)."""
+"""Chat router — chat history and message sending (Supabase store)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
-from app.db.game_store import store
+from app.db.supabase_store import store
 from app.models.chat_models import SendMessageRequest
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 """Game router — CRUD, move commands, persuasion, resign, draw.
 
-Uses in-memory game store instead of Supabase for anonymous play.
+Uses Supabase for persistent game storage.
 Players are identified by a session_id header (X-Session-Id).
 """
 
@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from app.db.game_store import store
+from app.db.supabase_store import store
 from app.models.game_models import (
     BoardState,
     CommandRequest,

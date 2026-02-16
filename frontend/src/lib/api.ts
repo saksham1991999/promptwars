@@ -10,14 +10,18 @@ import type {
     ChatMessage,
 } from '../types/game';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!BASE_URL) {
+    throw new Error('VITE_API_BASE_URL environment variable is not configured');
+}
 
 /** Get or create a session ID stored in localStorage */
 export function getSessionId(): string {
-    let id = localStorage.getItem('promptwars_session_id');
+    let id = localStorage.getItem('chessalive_session_id');
     if (!id) {
         id = crypto.randomUUID();
-        localStorage.setItem('promptwars_session_id', id);
+        localStorage.setItem('chessalive_session_id', id);
     }
     return id;
 }

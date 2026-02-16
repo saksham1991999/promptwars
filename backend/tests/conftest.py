@@ -1,4 +1,4 @@
-"""Test fixtures for PromptWars backend tests."""
+"""Test fixtures for Chess Alive backend tests."""
 
 from __future__ import annotations
 

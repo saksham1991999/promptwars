@@ -1,1 +1,1 @@
-# PromptWars Backend
+# Chess Alive Backend

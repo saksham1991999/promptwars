@@ -1,4 +1,5 @@
 /** Morale Tracker — displays morale bars for each piece */
+import { BarChart3, TrendingUp, TrendingDown, Minus, Smile, Meh, Frown } from 'lucide-react';
 import type { GamePiece } from '../types/game';
 
 const PIECE_ICONS: Record<string, string> = {
@@ -13,13 +14,20 @@ function getMoraleClass(morale: number): string {
     return 'morale-critical';
 }
 
-function getMoraleLabel(morale: number): string {
-    if (morale >= 80) return '😄 Enthusiastic';
-    if (morale >= 60) return '🙂 Normal';
-    if (morale >= 40) return '😐 Reluctant';
-    if (morale >= 20) return '😟 Demoralized';
-    return '😤 Mutinous';
+function getMoraleColor(morale: number): string {
+    if (morale >= 80) return 'var(--morale-high)';
+    if (morale >= 60) return 'var(--morale-normal)';
+    if (morale >= 40) return 'var(--morale-medium)';
+    if (morale >= 20) return 'var(--morale-low)';
+    return 'var(--morale-critical)';
 }
+
+function getMoraleIcon(morale: number) {
+    if (morale >= 80) return <Smile size={14} />;
+    if (morale >= 40) return <Meh size={14} />;
+    return <Frown size={14} />;
+}
+
 
 interface MoraleTrackerProps {
     pieces: GamePiece[];
@@ -38,34 +46,70 @@ export default function MoraleTracker({ pieces, playerColor }: MoraleTrackerProp
         ? Math.round(myPieces.reduce((sum, p) => sum + p.morale, 0) / myPieces.length)
         : 0;
 
+    const TrendIcon = avgMorale >= 70 ? TrendingUp : avgMorale >= 40 ? Minus : TrendingDown;
+
     return (
         <div className="card">
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>📊 Army Morale</span>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                    Avg: {avgMorale}%
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <BarChart3 size={20} />
+                    <span>Army Morale</span>
+                </div>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-2)',
+                    fontSize: 'var(--text-sm)',
+                    color: getMoraleColor(avgMorale),
+                    fontWeight: 'var(--font-semibold)',
+                }}>
+                    <TrendIcon size={16} />
+                    {avgMorale}%
+                </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 {myPieces.map((piece) => (
-                    <div key={piece.id} className={`morale-bar-container ${getMoraleClass(piece.morale)}`}>
+                    <div
+                        key={piece.id}
+                        className={`morale-bar-container ${getMoraleClass(piece.morale)}`}
+                        role="progressbar"
+                        aria-valuenow={piece.morale}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`${piece.piece_type} morale: ${piece.morale}%`}
+                    >
                         <div className="morale-bar-label">
-                            <span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
                                 {PIECE_ICONS[piece.piece_type] || '?'} {piece.piece_type.charAt(0).toUpperCase() + piece.piece_type.slice(1)}
-                                {piece.square && <span style={{ color: 'var(--text-tertiary)', marginLeft: '4px' }}>({piece.square})</span>}
+                                {piece.square && <span style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}>({piece.square})</span>}
                             </span>
-                            <span>{piece.morale}% — {getMoraleLabel(piece.morale).split(' ')[0]}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-xs)' }}>
+                                {getMoraleIcon(piece.morale)}
+                                {piece.morale}%
+                            </span>
                         </div>
                         <div className="morale-bar">
-                            <div className="morale-bar-fill" style={{ width: `${piece.morale}%` }} />
+                            <div
+                                className="morale-bar-fill"
+                                style={{
+                                    width: `${piece.morale}%`,
+                                    background: `linear-gradient(90deg, ${getMoraleColor(piece.morale)}, ${getMoraleColor(piece.morale)}dd)`,
+                                    transition: 'width 0.3s ease, background 0.3s ease',
+                                }}
+                            />
                         </div>
                     </div>
                 ))}
             </div>
 
             {myPieces.length === 0 && (
-                <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 'var(--space-4)' }}>
+                <p style={{
+                    color: 'var(--text-tertiary)',
+                    textAlign: 'center',
+                    padding: 'var(--space-4)',
+                    fontSize: 'var(--text-sm)',
+                }}>
                     No active pieces
                 </p>
             )}

@@ -1,14 +1,93 @@
-"""Rate limiting middleware to prevent API abuse."""
+"""Rate limiting middleware to prevent API abuse - Redis-backed for production."""
 
 from __future__ import annotations
 
+import logging
 import time
 from collections import deque
 from typing import Callable
 
+import redis
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class RedisRateLimiter:
+    """Redis-backed rate limiter for distributed systems (production)."""
+
+    def __init__(self, redis_url: str):
+        """Initialize Redis client with connection pooling."""
+        try:
+            self.redis_client = redis.from_url(
+                redis_url,
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                retry_on_timeout=True,
+            )
+            # Test connection
+            self.redis_client.ping()
+            logger.info("Redis rate limiter initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to connect to Redis: {e}", exc_info=True)
+            raise
+
+    def check_rate_limit(
+        self, key: str, max_requests: int, window_seconds: int
+    ) -> tuple[bool, int]:
+        """
+        Check if request is within rate limit using Redis sorted sets.
+
+        Args:
+            key: Unique key for rate limiting (e.g., session_id:endpoint)
+            max_requests: Maximum requests allowed in window
+            window_seconds: Time window in seconds
+
+        Returns:
+            Tuple of (is_allowed, retry_after_seconds)
+        """
+        try:
+            now = time.time()
+            cutoff = now - window_seconds
+
+            # Use sorted set with timestamps as scores
+            pipe = self.redis_client.pipeline()
+
+            # Remove old entries
+            pipe.zremrangebyscore(key, 0, cutoff)
+
+            # Count current requests in window
+            pipe.zcard(key)
+
+            # Add current timestamp if not over limit
+            pipe.zadd(key, {str(now): now})
+
+            # Set expiry for cleanup
+            pipe.expire(key, window_seconds)
+
+            results = pipe.execute()
+            current_count = results[1]
+
+            if current_count >= max_requests:
+                # Calculate retry after time
+                oldest_scores = self.redis_client.zrange(key, 0, 0, withscores=True)
+                if oldest_scores:
+                    oldest_timestamp = oldest_scores[0][1]
+                    retry_after = int(oldest_timestamp + window_seconds - now) + 1
+                    return False, retry_after
+                return False, window_seconds
+
+            return True, 0
+
+        except Exception as e:
+            logger.error(f"Redis rate limit check failed: {e}", exc_info=True)
+            # Fail open - allow request if Redis is down (logged for monitoring)
+            return True, 0
 
 
 class InMemoryRateLimiter:
@@ -93,7 +172,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         "/api/v1/ai/": (10, 60),  # 10 requests per minute for AI endpoints
     }
 
-    def __init__(self, app, limiter: InMemoryRateLimiter | None = None):
+    def __init__(self, app, limiter: RedisRateLimiter | InMemoryRateLimiter | None = None):
         """
         Initialize rate limit middleware.
 
@@ -102,7 +181,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             limiter: Optional custom rate limiter (for testing)
         """
         super().__init__(app)
-        self.limiter = limiter or InMemoryRateLimiter()
+
+        if limiter:
+            self.limiter = limiter
+        elif settings.rate_limit_redis_url:
+            # Production: use Redis for distributed rate limiting
+            try:
+                self.limiter = RedisRateLimiter(settings.rate_limit_redis_url)
+                logger.info("Using Redis-backed rate limiter")
+            except Exception as e:
+                logger.warning(f"Redis connection failed, falling back to in-memory: {e}")
+                self.limiter = InMemoryRateLimiter()
+        else:
+            # Development: use in-memory rate limiter
+            self.limiter = InMemoryRateLimiter()
+            if settings.environment == "production":
+                logger.warning("Using in-memory rate limiter in production - will not scale across instances")
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """
@@ -150,8 +244,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 headers={"Retry-After": str(retry_after)},
             )
 
-        # Periodically clean up old entries (every ~100th request)
-        if hash(key) % 100 == 0:
+        # Clean up old entries for in-memory limiter only
+        if isinstance(self.limiter, InMemoryRateLimiter) and hash(key) % 100 == 0:
             self.limiter.clear_old_entries()
 
         return await call_next(request)

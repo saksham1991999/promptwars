@@ -1,0 +1,125 @@
+name: Deploy to Cloud Run
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # For Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Build backend image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-backend:${{ github.sha }} \
+            -t gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-backend:latest \
+            ./backend
+
+      - name: Push backend image
+        run: |
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-backend:${{ github.sha }}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-backend:latest
+
+      - name: Deploy backend to Cloud Run
+        run: |
+          # Replace PROJECT_ID placeholder in cloudrun.yaml
+          sed -i "s/PROJECT_ID/${{ env.GCP_PROJECT_ID }}/g" backend/cloudrun.yaml
+
+          gcloud run services replace backend/cloudrun.yaml \
+            --region=${{ env.GCP_REGION }}
+
+      - name: Get backend URL
+        id: backend-url
+        run: |
+          URL=$(gcloud run services describe chess-alive-backend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Backend deployed to: $URL"
+
+    outputs:
+      backend_url: ${{ steps.backend-url.outputs.url }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: deploy-backend  # Wait for backend to get URL
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Build frontend image with env vars
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL=${{ needs.deploy-backend.outputs.backend_url }}/api/v1 \
+            --build-arg VITE_SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.SUPABASE_PUBLISHABLE_KEY }} \
+            --build-arg VITE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }} \
+            --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN_FRONTEND }} \
+            -t gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-frontend:${{ github.sha }} \
+            -t gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-frontend:latest \
+            ./frontend
+
+      - name: Push frontend image
+        run: |
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-frontend:${{ github.sha }}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/chess-alive-frontend:latest
+
+      - name: Deploy frontend to Cloud Run
+        run: |
+          # Replace PROJECT_ID placeholder
+          sed -i "s/PROJECT_ID/${{ env.GCP_PROJECT_ID }}/g" frontend/cloudrun.yaml
+
+          gcloud run services replace frontend/cloudrun.yaml \
+            --region=${{ env.GCP_REGION }}
+
+      - name: Get frontend URL
+        run: |
+          URL=$(gcloud run services describe chess-alive-frontend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          echo "Frontend deployed to: $URL"
+
+      - name: Update backend CORS with frontend URL
+        run: |
+          FRONTEND_URL=$(gcloud run services describe chess-alive-frontend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+
+          echo "⚠️  IMPORTANT: Update backend ALLOWED_ORIGINS secret to include: $FRONTEND_URL"
+          echo "Run: gcloud secrets versions add chess-alive-allowed-origins --data-file=<(echo '[\"$FRONTEND_URL\"]')"

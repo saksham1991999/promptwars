@@ -1,3 +1,8 @@
+# ⚠️  WARNING: FOR LOCAL DEVELOPMENT ONLY ⚠️
+# DO NOT use this docker-compose.yml in production!
+# For production deployment, see backend/cloudrun.yaml and frontend/cloudrun.yaml
+# This file uses volume mounts which are insecure and inappropriate for production.
+
 version: '3.8'
 services:
   backend:

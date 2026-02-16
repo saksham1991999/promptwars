@@ -1,0 +1,146 @@
+name: Smoke Tests
+on:
+  workflow_run:
+    workflows: ["Deploy to Cloud Run"]
+    types:
+      - completed
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get service URLs
+        id: urls
+        run: |
+          BACKEND_URL=$(gcloud run services describe chess-alive-backend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+          FRONTEND_URL=$(gcloud run services describe chess-alive-frontend \
+            --region=${{ env.GCP_REGION }} \
+            --format='value(status.url)')
+
+          echo "backend=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "frontend=$FRONTEND_URL" >> $GITHUB_OUTPUT
+
+          echo "🔍 Testing services:"
+          echo "  Backend: $BACKEND_URL"
+          echo "  Frontend: $FRONTEND_URL"
+
+      - name: Test backend health
+        run: |
+          echo "Testing backend health endpoint..."
+          curl -f -s "${{ steps.urls.outputs.backend }}/health" | jq .
+          if [ $? -eq 0 ]; then
+            echo "✅ Backend health check passed"
+          else
+            echo "❌ Backend health check failed"
+            exit 1
+          fi
+
+      - name: Test frontend health
+        run: |
+          echo "Testing frontend health endpoint..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.urls.outputs.frontend }}/health")
+          if [ "$HTTP_CODE" == "200" ]; then
+            echo "✅ Frontend health check passed"
+          else
+            echo "❌ Frontend health check failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Test backend API root
+        run: |
+          echo "Testing backend API root..."
+          curl -f -s "${{ steps.urls.outputs.backend }}/api/v1" | jq .
+          if [ $? -eq 0 ]; then
+            echo "✅ Backend API root accessible"
+          else
+            echo "❌ Backend API root failed"
+            exit 1
+          fi
+
+      - name: Test game creation
+        run: |
+          echo "Testing game creation..."
+          SESSION_ID=$(uuidgen)
+          RESPONSE=$(curl -s -X POST "${{ steps.urls.outputs.backend }}/api/v1/games" \
+            -H "Content-Type: application/json" \
+            -H "X-Session-ID: $SESSION_ID" \
+            -d '{"game_mode":"pvai","template":"classic"}')
+
+          GAME_ID=$(echo $RESPONSE | jq -r '.id')
+          SHARE_CODE=$(echo $RESPONSE | jq -r '.share_code')
+
+          if [ -n "$GAME_ID" ] && [ "$GAME_ID" != "null" ]; then
+            echo "✅ Game created successfully"
+            echo "   Game ID: $GAME_ID"
+            echo "   Share Code: $SHARE_CODE"
+          else
+            echo "❌ Game creation failed"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Test frontend loads
+        run: |
+          echo "Testing frontend loads..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.urls.outputs.frontend }}/")
+          if [ "$HTTP_CODE" == "200" ]; then
+            echo "✅ Frontend loads successfully"
+          else
+            echo "❌ Frontend failed to load (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Check security headers
+        run: |
+          echo "Checking security headers..."
+          HEADERS=$(curl -sI "${{ steps.urls.outputs.frontend }}/")
+
+          # Check for required security headers
+          if echo "$HEADERS" | grep -i "X-Frame-Options"; then
+            echo "✅ X-Frame-Options present"
+          else
+            echo "⚠️  X-Frame-Options missing"
+          fi
+
+          if echo "$HEADERS" | grep -i "Content-Security-Policy"; then
+            echo "✅ Content-Security-Policy present"
+          else
+            echo "⚠️  Content-Security-Policy missing"
+          fi
+
+          if echo "$HEADERS" | grep -i "Strict-Transport-Security"; then
+            echo "✅ Strict-Transport-Security present"
+          else
+            echo "⚠️  Strict-Transport-Security missing"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🎯 Smoke Test Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Backend URL: ${{ steps.urls.outputs.backend }}"
+          echo "Frontend URL: ${{ steps.urls.outputs.frontend }}"
+          echo ""
+          echo "All critical smoke tests completed."
+          echo "Monitor Sentry and Cloud Run logs for any issues."

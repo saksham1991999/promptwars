@@ -99,10 +99,10 @@ async def signup(request: SignupRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Signup failed: %s", exc)
+        logger.error("Signup failed: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error_code": "SIGNUP_FAILED", "message": str(exc)},
+            detail={"error_code": "SIGNUP_FAILED", "message": "Account creation failed. Please try again."},
         ) from exc
 
 
@@ -141,7 +141,7 @@ async def login(request: LoginRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Login failed: %s", exc)
+        logger.error("Login failed: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error_code": "UNAUTHORIZED", "message": "Invalid credentials"},
