@@ -10,13 +10,12 @@ export default function JoinPage() {
     const { shareCode } = useParams<{ shareCode: string }>();
     const navigate = useNavigate();
     const showToast = useUIStore((state) => state.showToast);
-    const [error, setError] = useState('');
+    const [error, setError] = useState(() =>
+        shareCode ? '' : 'No share code provided'
+    );
 
     useEffect(() => {
-        if (!shareCode) {
-            setError('No share code provided');
-            return;
-        }
+        if (!shareCode) return;
 
         const joinGame = async () => {
             try {
