@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import Header, HTTPException, status
 
-from app.db.game_store import store
+from app.db import store
 
 
 def get_session_id(x_session_id: str | None = Header(None)) -> str:

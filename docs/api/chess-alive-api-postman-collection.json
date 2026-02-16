@@ -1,0 +1,649 @@
+{
+  "info": {
+    "name": "Chess Alive API",
+    "description": "Chess with AI personalities — move command, persuasion, morale, and analysis API",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "contact": {
+      "name": "Chess Alive Support"
+    }
+  },
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Comprehensive health check endpoint that checks database connectivity, Redis connectivity, and Gemini API configuration."
+          },
+          "response": [
+            {
+              "name": "Healthy Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ok\",\n  \"version\": \"1.0.0\",\n  \"environment\": \"development\",\n  \"checks\": {\n    \"database\": \"ok\",\n    \"redis\": \"ok\",\n    \"gemini_api\": \"ok\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/readiness",
+              "host": ["{{baseUrl}}"],
+              "path": ["readiness"]
+            },
+            "description": "Readiness check for Kubernetes/Cloud Run. Returns 503 if not ready to serve traffic."
+          },
+          "response": [
+            {
+              "name": "Ready Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"ready\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Sign Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"player@example.com\",\n  \"password\": \"securePassword123\",\n  \"username\": \"ChessMaster\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "signup"]
+            },
+            "description": "Register a new user with email and password."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "Created",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"id\": \"user-uuid\",\n    \"username\": \"ChessMaster\",\n    \"email\": \"player@example.com\",\n    \"avatar_url\": null,\n    \"games_played\": 0,\n    \"games_won\": 0,\n    \"games_lost\": 0,\n    \"games_drawn\": 0,\n    \"settings\": {}\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"player@example.com\",\n  \"password\": \"securePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login with email and password."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"id\": \"user-uuid\",\n    \"username\": \"ChessMaster\",\n    \"email\": \"player@example.com\",\n    \"avatar_url\": null,\n    \"games_played\": 10,\n    \"games_won\": 6,\n    \"games_lost\": 3,\n    \"games_drawn\": 1,\n    \"settings\": {}\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Get the current user's profile."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"user-uuid\",\n  \"username\": \"ChessMaster\",\n  \"email\": \"player@example.com\",\n  \"avatar_url\": null,\n  \"games_played\": 10,\n  \"games_won\": 6,\n  \"games_lost\": 3,\n  \"games_drawn\": 1,\n  \"settings\": {}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"NewChessMaster\",\n  \"avatar_url\": \"https://example.com/avatar.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "profile"]
+            },
+            "description": "Update the current user's profile."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Games",
+      "item": [
+        {
+          "name": "Create Game",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"game_mode\": \"pvp\",\n  \"template\": \"classic\",\n  \"settings\": {\n    \"surprise_mode\": false,\n    \"turn_timer\": null,\n    \"ai_difficulty\": \"medium\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games"]
+            },
+            "description": "Create a new game. Returns a share code that other players can use to join."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"game-uuid\",\n  \"status\": \"waiting\",\n  \"game_mode\": \"pvp\",\n  \"template\": \"classic\",\n  \"share_code\": \"ABC123\",\n  \"fen\": \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\",\n  \"turn\": \"white\",\n  \"white_player\": {\n    \"id\": \"session-id\",\n    \"username\": \"Player-abc123\",\n    \"avatar_url\": null\n  },\n  \"black_player\": null,\n  \"pieces\": [\n    {\n      \"id\": \"piece-uuid-1\",\n      \"color\": \"white\",\n      \"piece_type\": \"pawn\",\n      \"square\": \"a2\",\n      \"morale\": 70,\n      \"personality\": {\n        \"archetype\": \"default\",\n        \"traits\": [],\n        \"dialogue_style\": \"neutral\",\n        \"custom_prompt\": \"\",\n        \"morale_modifiers\": {}\n      },\n      \"is_captured\": false\n    }\n  ],\n  \"settings\": {\n    \"surprise_mode\": false,\n    \"turn_timer\": null,\n    \"ai_difficulty\": \"medium\"\n  },\n  \"created_at\": \"2026-02-16T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Game",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}"]
+            },
+            "description": "Get the current state of a game including board position, pieces with morale, and player information."
+          }
+        },
+        {
+          "name": "Join Game by Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"share_code\": \"ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/join-by-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "join-by-code"]
+            },
+            "description": "Join a game via share code."
+          }
+        },
+        {
+          "name": "Join Game (by Game ID)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"share_code\": \"ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/join",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "join"]
+            },
+            "description": "Join a game via share code (by game ID route)."
+          }
+        },
+        {
+          "name": "Issue Command",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"piece_id\": \"{{pieceId}}\",\n  \"target_square\": \"e4\",\n  \"message\": \"@Pawn-e2 move to e4\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/command",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "command"]
+            },
+            "description": "Issue a move command to a piece. The piece may refuse based on its morale and the riskiness of the move."
+          },
+          "response": [
+            {
+              "name": "Piece Accepted",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"move_executed\": true,\n  \"piece_response\": {\n    \"will_move\": true,\n    \"response_text\": \"At your command! Advancing to e4.\",\n    \"morale_before\": 70,\n    \"morale_after\": 73,\n    \"reason_for_refusal\": null\n  },\n  \"board_state\": {\n    \"fen\": \"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\",\n    \"turn\": \"black\",\n    \"is_check\": false,\n    \"is_checkmate\": false,\n    \"is_stalemate\": false,\n    \"last_move\": {\n      \"from_square\": \"e2\",\n      \"to_square\": \"e4\",\n      \"san\": \"e4\",\n      \"piece_type\": \"pawn\"\n    }\n  },\n  \"morale_changes\": [\n    {\n      \"piece_id\": \"piece-uuid\",\n      \"event_type\": \"good_position\",\n      \"change\": 3,\n      \"morale_after\": 73,\n      \"description\": \"The Pawn feels good about this move.\"\n    }\n  ],\n  \"analysis\": {\n    \"move_quality\": 7,\n    \"evaluation\": 0.2,\n    \"threats\": [],\n    \"opportunities\": [\"Controls center\"],\n    \"analysis_text\": \"Solid positional move: e4.\"\n  },\n  \"king_taunt\": \"You call that a move? My grandmother plays better chess!\"\n}"
+            },
+            {
+              "name": "Piece Refused",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"move_executed\": false,\n  \"piece_response\": {\n    \"will_move\": false,\n    \"response_text\": \"That looks dangerous! I'm not going there.\",\n    \"morale_before\": 45,\n    \"morale_after\": 43,\n    \"reason_for_refusal\": \"That looks dangerous! I'm not going there.\"\n  },\n  \"board_state\": {\n    \"fen\": \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\",\n    \"turn\": \"white\",\n    \"is_check\": false,\n    \"is_checkmate\": false,\n    \"is_stalemate\": false,\n    \"last_move\": null\n  },\n  \"morale_changes\": [],\n  \"analysis\": null,\n  \"king_taunt\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Persuade Piece",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"piece_id\": \"{{pieceId}}\",\n  \"target_square\": \"e4\",\n  \"argument\": \"This is a strong central move that will help us control the board! Trust me, I have a plan.\",\n  \"is_voice\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/persuade",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "persuade"]
+            },
+            "description": "Submit a persuasion attempt when a piece refuses to move. The AI evaluates your argument based on logic, personality match, and morale."
+          },
+          "response": [
+            {
+              "name": "Persuasion Successful",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"probability\": 0.75,\n  \"piece_response\": \"*sighs* Fine, you make a good point. I'll move to e4.\",\n  \"move_executed\": true,\n  \"board_state\": {\n    \"fen\": \"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\",\n    \"turn\": \"black\",\n    \"is_check\": false,\n    \"is_checkmate\": false,\n    \"is_stalemate\": false\n  },\n  \"evaluation\": {\n    \"logic_score\": 18,\n    \"personality_match\": 12,\n    \"morale_modifier\": 5,\n    \"trust_modifier\": 3,\n    \"urgency_factor\": 8,\n    \"total_probability\": 0.75\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Resign Game",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/resign",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "resign"]
+            },
+            "description": "Resign from the current game."
+          }
+        },
+        {
+          "name": "Offer Draw",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/draw-offer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "draw-offer"]
+            },
+            "description": "Offer a draw to the opponent."
+          }
+        },
+        {
+          "name": "Respond to Draw",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accept\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/draw-respond",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "draw-respond"]
+            },
+            "description": "Accept or decline a draw offer."
+          }
+        },
+        {
+          "name": "Get Move History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "moves"]
+            },
+            "description": "Get the move history for a game."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Get Chat History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/chat?page=1&page_size=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "chat"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get paginated chat history for a game."
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Good luck, opponent!\",\n  \"message_type\": \"player_message\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "games", "{{gameId}}", "chat"]
+            },
+            "description": "Send a player message in game chat."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "Generate Custom Piece",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"piece_type\": \"knight\",\n  \"prompt\": \"A brave knight who speaks in Shakespearean English and values honor above all else\",\n  \"color\": \"white\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai/custom-piece",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ai", "custom-piece"]
+            },
+            "description": "Generate a custom piece personality using AI."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"personality\": {\n    \"archetype\": \"honorable_warrior\",\n    \"traits\": [\"brave\", \"honorable\", \"dramatic\"],\n    \"dialogue_style\": \"Shakespearean, uses thee/thou, speaks of honor and glory\",\n    \"morale_modifiers\": {\n      \"threatened\": -5,\n      \"capture\": 20,\n      \"protected\": 10\n    }\n  },\n  \"preview_dialogue\": [\n    \"Forsooth! I shall charge into battle!\",\n    \"My honor compels me forward!\",\n    \"Alas, 'tis a dangerous path...\"\n  ],\n  \"visual_description\": \"A noble knight in gleaming silver armor, wielding a lance with a banner depicting a golden lion\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Latest Analysis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai/games/{{gameId}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ai", "games", "{{gameId}}", "analysis"]
+            },
+            "description": "Get the latest AI analysis for a game."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Base URL for the API"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string",
+      "description": "Player session ID (auto-generated if not provided)"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string",
+      "description": "Game UUID"
+    },
+    {
+      "key": "pieceId",
+      "value": "",
+      "type": "string",
+      "description": "Piece UUID"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token from auth endpoints"
+    }
+  ]
+}

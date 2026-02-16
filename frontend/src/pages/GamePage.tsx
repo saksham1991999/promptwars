@@ -30,6 +30,7 @@ export default function GamePage() {
     const [persuasionResult, setPersuasionResult] = useState<PersuasionResponse | null>(null);
     const [persuasionLoading, setPersuasionLoading] = useState(false);
     const [commandLoading, setCommandLoading] = useState(false);
+    const [isMoraleCollapsed, setIsMoraleCollapsed] = useState(true);
 
     // Global stores
     const {
@@ -436,7 +437,12 @@ export default function GamePage() {
 
             {/* Right: Chat + Morale */}
             <div className="game-right">
-                <MoraleTracker pieces={pieces} playerColor={playerColor} />
+                <MoraleTracker
+                    pieces={pieces}
+                    playerColor={playerColor}
+                    isCollapsed={isMoraleCollapsed}
+                    onToggle={() => setIsMoraleCollapsed(!isMoraleCollapsed)}
+                />
 
                 <div style={{ flex: 1, minHeight: 0, marginTop: 'var(--space-4)' }}>
                     <ChatInterface

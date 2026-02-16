@@ -15,7 +15,7 @@ This is a **full-stack application** with:
 - **Frontend:** React 19 + TypeScript + Vite (port 5173)
 - **Backend:** FastAPI (Python) + Uvicorn (port 8000)
 - **Database:** Supabase (PostgreSQL) with Realtime for live game updates
-- **AI:** Pydantic AI + Google Gemini 2.0 Flash for piece personalities, analysis, and persuasion evaluation
+- **AI:** Pydantic AI + Google Gemini 3 Flash for piece personalities, analysis, and persuasion evaluation
 
 ### Key Architectural Patterns
 
@@ -32,26 +32,33 @@ This is a **full-stack application** with:
 
 ### Backend (Python/FastAPI)
 
+**Important:** All commands must be run from the `backend/` directory with the virtual environment activated. The backend uses absolute imports (e.g., `from app.core.config import settings`) so Python needs to find the `app` package in the current directory.
+
 ```bash
 cd backend
 
-# Setup environment
+# Setup environment (one-time)
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt -r requirements-dev.txt
 cp .env.example .env  # Edit with your API keys
 
-# Run development server
-uvicorn app.main:app --reload --port 8000
+# Run development server (must be in backend/ directory with venv activated)
+cd backend && source venv/bin/activate && python -m uvicorn app.main:app --reload --port 8000
 
-# Testing
+# Alternative: separate commands
+cd backend
+source venv/bin/activate
+python -m uvicorn app.main:app --reload --port 8000
+
+# Testing (run from backend/ with venv activated)
 pytest                          # Run all tests
 pytest -m unit                  # Unit tests only
 pytest -m integration           # Integration tests only
 pytest tests/unit/test_chess_engine.py  # Single test file
 pytest -v --cov --cov-report=html  # With coverage HTML report
 
-# Code quality
+# Code quality (run from backend/ with venv activated)
 ruff check .                    # Lint
 ruff check . --fix              # Auto-fix linting issues
 black .                         # Format code
@@ -82,7 +89,7 @@ npm run lint         # ESLint check
 
 **`gemini_service.py`** — The AI orchestrator
 - Manages 5 Pydantic AI agents (piece response, analysis, persuasion, taunts, custom pieces)
-- Uses Google Gemini 2.0 Flash as the LLM backend
+- Uses Google Gemini 3 Flash as the LLM backend
 - Implements fallback templates when API is unavailable or rate-limited
 - Includes TTL caching for analysis (5min) and taunts (30min)
 
@@ -156,11 +163,14 @@ npm run lint         # ESLint check
 
 ### Backend (`backend/.env`)
 - `SUPABASE_URL`, `SUPABASE_SECRET_KEY` — Database & auth
-- `GOOGLE_GEMINI_API_KEY` — Required for AI features (has fallbacks)
-- `NANO_BANANA_API_KEY` — Optional, for custom piece image generation
+- `GOOGLE_GEMINI_API_KEY` — Required for AI features via Google GenAI (has fallbacks)
+- `NANO_BANANA_API_KEY` — Optional, for custom piece image generation via Nano Banana Pro API
 - `SECRET_KEY` — JWT signing (must be 32+ chars in production)
 - `ALLOWED_ORIGINS` — CORS whitelist (e.g., `["http://localhost:5173"]`)
 - `ENVIRONMENT` — `development` | `staging` | `production`
+- `REDIS_URL` — Google Memorystore Redis connection string
+- `SENTRY_DSN` — Error tracking (Cloud Error Reporting alternative)
+- `POSTHOG_KEY` — Product analytics
 
 ### Frontend (`frontend/.env`)
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase client init
@@ -220,7 +230,7 @@ npm run lint         # ESLint check
 - **Fallbacks:** Pre-written templates in `FALLBACK_RESPONSES` dict when API unavailable
 
 ### Pydantic AI Agents
-All agents use `gemini-2.0-flash` model (fast, cheap, capable):
+All agents use `gemini-3-flash` model (fast, cheap, capable):
 1. **Piece Response Agent** — Determines if piece obeys + generates dialogue
 2. **Analysis Agent** — Move quality scoring + commentary
 3. **Persuasion Agent** — Evaluates player arguments
@@ -255,11 +265,114 @@ supabase stop            # Stop local instance
 
 ## Deployment
 
-- **Frontend:** Vercel (automatic from `main` branch pushes)
-- **Backend:** Google Cloud Run (Docker container)
+- **Frontend:** Google Cloud Run (Docker container with nginx)
+- **Backend:** Google Cloud Run (Docker container with Uvicorn)
 - **Database:** Supabase hosted (production instance)
 
-Dockerfile located at `backend/Dockerfile` for Cloud Run deployment.
+## Google Cloud Integration
+
+Chess Alive runs entirely on Google Cloud Platform, leveraging multiple services for scalability, security, and AI capabilities.
+
+### Services Used
+
+1. **Google Gemini 3 Flash** — Primary LLM for all AI features
+   - 5 specialized Pydantic AI agents for different tasks
+   - Location: `backend/app/services/gemini_service.py`
+   - Model ID: `google-gla:gemini-3-flash`
+   - Temperature settings: 0.3 (analysis) to 0.9 (taunts)
+
+2. **Google Cloud Run** — Serverless container hosting
+   - Backend service: `chess-alive-backend` (1-10 instances, 1Gi memory)
+   - Frontend service: `chess-alive-frontend` (1-20 instances, nginx static serving)
+   - Region: `us-central1`
+   - Features: Auto-scaling, CPU throttling, startup CPU boost
+   - Timeout: 300s (backend), 60s (frontend)
+
+3. **Google Container Registry (GCR)** — Docker image storage
+   - Image path: `gcr.io/{PROJECT_ID}/chess-alive-{service}:{tag}`
+   - Integrated with Cloud Build and GitHub Actions
+   - Automatic vulnerability scanning available
+
+4. **Google Secret Manager** — Secure credential storage
+   - `chess-alive-gemini-key` — Gemini API key
+   - `chess-alive-supabase-url` — Database URL
+   - `chess-alive-supabase-secret` — Service role key
+   - `chess-alive-secret-key` — JWT signing key
+   - `chess-alive-redis-url` — Redis connection string
+   - `chess-alive-sentry-dsn` — Error tracking
+   - Mounted as environment variables in Cloud Run
+
+5. **Google Memorystore for Redis** — Caching and rate limiting
+   - Used by: `backend/app/middleware/rate_limiter.py`
+   - Tier: Basic, Redis 7.0
+   - Purpose: Rate limiting, session storage, move deduplication
+
+6. **Google Cloud SDK & CLI** — Deployment tooling
+   - Service account: `chess-alive-sa@{PROJECT}.iam.gserviceaccount.com`
+   - IAM roles: Secret Manager Secret Accessor, Cloud Run Developer
+   - CI/CD: GitHub Actions with workload identity federation
+
+7. **Google Cloud Storage** — Asset and replay storage
+   - Custom piece images generated via Nano Banana Pro
+   - Game replay files (PGN/FEN history)
+   - User-generated content and avatars
+   - CORS-enabled for direct frontend access
+
+8. **Cloud Monitoring** — Metrics and observability
+   - Custom dashboards for game metrics (active games, AI usage)
+   - Alerting policies for error rates and latency
+   - Uptime checks for health monitoring
+   - Custom metrics for morale events and persuasion attempts
+
+9. **Cloud Logging** — Centralized log management
+   - Structured JSON logs from all Cloud Run services
+   - Log-based metrics for business events
+   - Log sinks for long-term archival
+   - Integration with Cloud Trace for request correlation
+
+10. **Cloud Trace** — Distributed tracing
+    - Request latency analysis across services
+    - AI API call performance tracking
+    - Database query performance insights
+    - End-to-end request flow visualization
+
+11. **Cloud Error Reporting** — Error aggregation
+    - Automatic grouping of similar errors
+    - Error notifications via email/SMS
+    - Integration with Cloud Logging for context
+    - Error trend analysis and reporting
+
+12. **Speech-to-Text API** — Voice command processing
+    - Real-time speech recognition for persuasion arguments
+    - Multi-language support (future roadmap)
+    - Premium accuracy for tactical move descriptions
+    - Streaming recognition for continuous voice input
+
+### Deployment Architecture
+
+```
+GitHub Repo
+    ↓ (GitHub Actions)
+Docker Build → GCR
+    ↓
+Cloud Run Deploy (backend + frontend)
+    ↓
+Secret Manager (runtime secrets)
+    ↓
+Memorystore Redis (caching)
+    ↓
+Cloud Storage (assets, replays)
+    ↓
+Cloud Monitoring/Logging/Trace (observability)
+```
+
+### Configuration Files
+
+- `backend/cloudrun.yaml` — Backend service definition
+- `frontend/cloudrun.yaml` — Frontend service definition
+- `.github/workflows/deploy.yml` — CI/CD pipeline
+- `backend/Dockerfile` — Backend container image
+- `frontend/Dockerfile` — Frontend container image
 
 ## API Documentation
 

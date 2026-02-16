@@ -1,0 +1,1111 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Chess Alive API",
+    "description": "Chess with AI personalities — move command, persuasion, morale, and analysis API.\n\n## Key Features\n\n- **AI-Powered Pieces**: Pieces have personalities and can refuse orders\n- **Persuasion System**: Convince stubborn pieces with compelling arguments\n- **Real-time Updates**: Supabase Realtime for live game synchronization\n- **Morale Management**: Keep your army's spirits high\n- **King Taunts**: Your opponent's King talks trash\n\n## Authentication\n\nTwo authentication methods are supported:\n\n### 1. Session-Based (Game Endpoints)\nInclude the `X-Session-ID` header. A session ID will be auto-generated if not provided.\n\n### 2. JWT Token (Auth Endpoints)\nUse `Authorization: Bearer {token}` for user authentication.\n\n## Game Flow\n\n1. **Create Game**: `POST /api/v1/games` → Returns share code\n2. **Join Game**: `POST /api/v1/games/join-by-code` → Use share code\n3. **Issue Command**: `POST /api/v1/games/{id}/command` → Move pieces\n4. **Persuade**: `POST /api/v1/games/{id}/persuade` → If piece refuses\n\n## Realtime Updates\n\nSubscribe to Supabase channels for live updates:\n- `game:{game_id}` - Game state changes\n- `chat:{game_id}` - Chat messages\n- `morale:{game_id}` - Morale updates\n\n## Error Codes\n\n| Code | Description |\n|------|-------------|\n| `GAME_NOT_FOUND` | Game does not exist |\n| `INVALID_MOVE` | Move violates chess rules |\n| `NOT_YOUR_TURN` | Attempted move out of turn |\n| `PIECE_CAPTURED` | Piece is no longer on board |\n| `FORBIDDEN` | Not authorized to move this piece |",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Chess Alive Team",
+      "url": "https://github.com/yourusername/chess-alive"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "games",
+      "description": "Game management - create, join, view games and their state"
+    },
+    {
+      "name": "game-actions",
+      "description": "In-game actions - issue commands, persuade pieces, resign, draw"
+    },
+    {
+      "name": "chat",
+      "description": "Chat system - get history and send messages"
+    },
+    {
+      "name": "ai",
+      "description": "AI features - custom piece generation and game analysis"
+    },
+    {
+      "name": "auth",
+      "description": "Authentication - signup, login, profile management"
+    },
+    {
+      "name": "health",
+      "description": "Health and readiness checks for monitoring"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Health Check",
+        "description": "Comprehensive health check endpoint that checks database connectivity, Redis connectivity, and Gemini API configuration.",
+        "responses": {
+          "200": {
+            "description": "Healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readiness": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Readiness Check",
+        "description": "Kubernetes/Cloud Run readiness probe. Returns 503 if not ready to serve traffic.",
+        "responses": {
+          "200": {
+            "description": "Ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessCheck"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Not Ready"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Sign Up",
+        "description": "Register a new user with email and password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Signup failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Login",
+        "description": "Login with email and password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": ["auth"],
+        "summary": "Get Current User",
+        "description": "Get the current user's profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/profile": {
+      "put": {
+        "tags": ["auth"],
+        "summary": "Update Profile",
+        "description": "Update the current user's profile.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games": {
+      "post": {
+        "tags": ["games"],
+        "summary": "Create Game",
+        "description": "Create a new game. Returns a share code that other players can use to join.",
+        "parameters": [
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Player session ID (auto-generated if not provided)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGameRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Game created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}": {
+      "get": {
+        "tags": ["games"],
+        "summary": "Get Game",
+        "description": "Get the current state of a game including board position, pieces with morale, and player information.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Game UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Game state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Game not found"
+          }
+        }
+      }
+    },
+    "/api/v1/games/join-by-code": {
+      "post": {
+        "tags": ["games"],
+        "summary": "Join Game by Code",
+        "description": "Join an existing game using its share code.",
+        "parameters": [
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinGameRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Joined game successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid share code"
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/join": {
+      "post": {
+        "tags": ["games"],
+        "summary": "Join Game (by Game ID)",
+        "description": "Alternative join endpoint using game ID.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinGameRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Joined game successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/command": {
+      "post": {
+        "tags": ["game-actions"],
+        "summary": "Issue Command",
+        "description": "Issue a move command to a piece. The piece may refuse based on its morale and the riskiness of the move.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Command processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid move or not your turn"
+          },
+          "404": {
+            "description": "Game or piece not found"
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/persuade": {
+      "post": {
+        "tags": ["game-actions"],
+        "summary": "Persuade Piece",
+        "description": "Submit a persuasion attempt when a piece refuses to move. The AI evaluates your argument.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersuasionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Persuasion processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersuasionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/resign": {
+      "post": {
+        "tags": ["game-actions"],
+        "summary": "Resign Game",
+        "description": "Resign from the current game.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resignation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "result": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/draw-offer": {
+      "post": {
+        "tags": ["game-actions"],
+        "summary": "Offer Draw",
+        "description": "Offer a draw to your opponent.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Draw offered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "message": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/draw-respond": {
+      "post": {
+        "tags": ["game-actions"],
+        "summary": "Respond to Draw",
+        "description": "Accept or decline a draw offer.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DrawRespondRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response recorded"
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/moves": {
+      "get": {
+        "tags": ["games"],
+        "summary": "Get Move History",
+        "description": "Get the complete move history for a game.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Move history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "moves": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Move"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/chat": {
+      "get": {
+        "tags": ["chat"],
+        "summary": "Get Chat History",
+        "description": "Get paginated chat history for a game.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatMessage"
+                      }
+                    },
+                    "total": {"type": "integer"},
+                    "page": {"type": "integer"},
+                    "page_size": {"type": "integer"},
+                    "has_more": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["chat"],
+        "summary": "Send Message",
+        "description": "Send a message in the game chat.",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message sent"
+          }
+        }
+      }
+    },
+    "/api/v1/ai/custom-piece": {
+      "post": {
+        "tags": ["ai"],
+        "summary": "Generate Custom Piece",
+        "description": "Generate a custom piece personality using AI.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomPieceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Custom piece generated"
+          },
+          "503": {
+            "description": "AI service unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/ai/games/{game_id}/analysis": {
+      "get": {
+        "tags": ["ai"],
+        "summary": "Get Latest Analysis",
+        "description": "Get the latest AI analysis for a game.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest analysis"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthCheck": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "example": "ok"},
+          "version": {"type": "string", "example": "1.0.0"},
+          "environment": {"type": "string", "example": "development"},
+          "checks": {
+            "type": "object",
+            "properties": {
+              "database": {"type": "string", "example": "ok"},
+              "redis": {"type": "string", "example": "ok"},
+              "gemini_api": {"type": "string", "example": "ok"}
+            }
+          }
+        }
+      },
+      "ReadinessCheck": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "example": "ready"}
+        }
+      },
+      "SignupRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {"type": "string", "format": "email"},
+          "password": {"type": "string", "minLength": 8},
+          "username": {"type": "string"}
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {"type": "string", "format": "email"},
+          "password": {"type": "string"}
+        }
+      },
+      "ProfileUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "username": {"type": "string"},
+          "avatar_url": {"type": "string"},
+          "settings": {"type": "object"}
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {"type": "string"},
+          "refresh_token": {"type": "string"},
+          "user": {"$ref": "#/components/schemas/ProfileResponse"}
+        }
+      },
+      "ProfileResponse": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "username": {"type": "string"},
+          "email": {"type": "string"},
+          "avatar_url": {"type": "string", "nullable": true},
+          "games_played": {"type": "integer", "default": 0},
+          "games_won": {"type": "integer", "default": 0},
+          "games_lost": {"type": "integer", "default": 0},
+          "games_drawn": {"type": "integer", "default": 0},
+          "settings": {"type": "object", "default": {}}
+        }
+      },
+      "CreateGameRequest": {
+        "type": "object",
+        "properties": {
+          "game_mode": {"type": "string", "enum": ["pvp", "pvai"], "default": "pvp"},
+          "template": {"type": "string", "enum": ["classic", "power_chess", "leaper_madness", "hopper_havoc", "pawn_revolution"], "default": "classic"},
+          "settings": {"$ref": "#/components/schemas/GameSettings"}
+        }
+      },
+      "GameSettings": {
+        "type": "object",
+        "properties": {
+          "surprise_mode": {"type": "boolean", "default": false},
+          "turn_timer": {"type": "integer", "nullable": true},
+          "ai_difficulty": {"type": "string", "enum": ["easy", "medium", "hard"], "default": "medium"}
+        }
+      },
+      "JoinGameRequest": {
+        "type": "object",
+        "required": ["share_code"],
+        "properties": {
+          "share_code": {"type": "string", "pattern": "^[A-Z0-9]{6,12}$"}
+        }
+      },
+      "GameResponse": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"type": "string", "enum": ["waiting", "active", "completed"]},
+          "game_mode": {"type": "string"},
+          "template": {"type": "string"},
+          "share_code": {"type": "string"},
+          "fen": {"type": "string"},
+          "turn": {"type": "string", "enum": ["white", "black"]},
+          "white_player": {"$ref": "#/components/schemas/PlayerSummary"},
+          "black_player": {"$ref": "#/components/schemas/PlayerSummary"},
+          "pieces": {"type": "array", "items": {"$ref": "#/components/schemas/PieceState"}},
+          "settings": {"$ref": "#/components/schemas/GameSettings"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "PlayerSummary": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "username": {"type": "string"},
+          "avatar_url": {"type": "string", "nullable": true}
+        }
+      },
+      "PieceState": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "color": {"type": "string", "enum": ["white", "black"]},
+          "piece_type": {"type": "string", "enum": ["pawn", "knight", "bishop", "rook", "queen", "king"]},
+          "square": {"type": "string", "nullable": true},
+          "morale": {"type": "integer", "minimum": 0, "maximum": 100, "default": 70},
+          "personality": {"$ref": "#/components/schemas/PiecePersonality"},
+          "is_captured": {"type": "boolean", "default": false}
+        }
+      },
+      "PiecePersonality": {
+        "type": "object",
+        "properties": {
+          "archetype": {"type": "string", "default": "default"},
+          "traits": {"type": "array", "items": {"type": "string"}},
+          "dialogue_style": {"type": "string", "default": "neutral"},
+          "custom_prompt": {"type": "string", "default": ""},
+          "morale_modifiers": {"type": "object"}
+        }
+      },
+      "CommandRequest": {
+        "type": "object",
+        "required": ["piece_id", "target_square"],
+        "properties": {
+          "piece_id": {"type": "string"},
+          "target_square": {"type": "string", "pattern": "^[a-h][1-8]$"},
+          "message": {"type": "string", "maxLength": 500}
+        }
+      },
+      "CommandResponse": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"},
+          "move_executed": {"type": "boolean"},
+          "piece_response": {"$ref": "#/components/schemas/PieceResponseData"},
+          "board_state": {"$ref": "#/components/schemas/BoardState"},
+          "morale_changes": {"type": "array", "items": {"$ref": "#/components/schemas/MoraleChange"}},
+          "analysis": {"$ref": "#/components/schemas/MoveAnalysis"},
+          "king_taunt": {"type": "string", "nullable": true}
+        }
+      },
+      "PieceResponseData": {
+        "type": "object",
+        "properties": {
+          "will_move": {"type": "boolean"},
+          "response_text": {"type": "string"},
+          "morale_before": {"type": "integer"},
+          "morale_after": {"type": "integer"},
+          "reason_for_refusal": {"type": "string", "nullable": true}
+        }
+      },
+      "BoardState": {
+        "type": "object",
+        "properties": {
+          "fen": {"type": "string"},
+          "turn": {"type": "string"},
+          "is_check": {"type": "boolean", "default": false},
+          "is_checkmate": {"type": "boolean", "default": false},
+          "is_stalemate": {"type": "boolean", "default": false},
+          "last_move": {"$ref": "#/components/schemas/MoveData"}
+        }
+      },
+      "MoveData": {
+        "type": "object",
+        "properties": {
+          "from_square": {"type": "string"},
+          "to_square": {"type": "string"},
+          "san": {"type": "string"},
+          "piece_type": {"type": "string"}
+        }
+      },
+      "MoraleChange": {
+        "type": "object",
+        "properties": {
+          "piece_id": {"type": "string"},
+          "event_type": {"type": "string"},
+          "change": {"type": "integer"},
+          "morale_after": {"type": "integer"},
+          "description": {"type": "string"}
+        }
+      },
+      "MoveAnalysis": {
+        "type": "object",
+        "properties": {
+          "move_quality": {"type": "integer", "minimum": 1, "maximum": 10},
+          "evaluation": {"type": "number"},
+          "threats": {"type": "array", "items": {"type": "string"}},
+          "opportunities": {"type": "array", "items": {"type": "string"}},
+          "analysis_text": {"type": "string"}
+        }
+      },
+      "PersuasionRequest": {
+        "type": "object",
+        "required": ["piece_id", "target_square", "argument"],
+        "properties": {
+          "piece_id": {"type": "string"},
+          "target_square": {"type": "string", "pattern": "^[a-h][1-8]$"},
+          "argument": {"type": "string", "maxLength": 500},
+          "is_voice": {"type": "boolean", "default": false}
+        }
+      },
+      "PersuasionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"},
+          "probability": {"type": "number"},
+          "piece_response": {"type": "string"},
+          "move_executed": {"type": "boolean"},
+          "board_state": {"$ref": "#/components/schemas/BoardState"},
+          "evaluation": {"$ref": "#/components/schemas/PersuasionEvaluation"}
+        }
+      },
+      "PersuasionEvaluation": {
+        "type": "object",
+        "properties": {
+          "logic_score": {"type": "integer"},
+          "personality_match": {"type": "integer"},
+          "morale_modifier": {"type": "integer"},
+          "trust_modifier": {"type": "integer"},
+          "urgency_factor": {"type": "integer"},
+          "total_probability": {"type": "number"}
+        }
+      },
+      "DrawRespondRequest": {
+        "type": "object",
+        "required": ["accept"],
+        "properties": {
+          "accept": {"type": "boolean"}
+        }
+      },
+      "Move": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "game_id": {"type": "string"},
+          "piece_id": {"type": "string"},
+          "player_id": {"type": "string"},
+          "move_number": {"type": "integer"},
+          "from_square": {"type": "string"},
+          "to_square": {"type": "string"},
+          "san": {"type": "string"},
+          "fen_after": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "ChatMessage": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "message_type": {"type": "string"},
+          "sender_name": {"type": "string"},
+          "content": {"type": "string"},
+          "metadata": {"type": "object"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {"type": "string", "maxLength": 1000},
+          "message_type": {"type": "string", "default": "player_message"}
+        }
+      },
+      "CustomPieceRequest": {
+        "type": "object",
+        "required": ["piece_type", "prompt"],
+        "properties": {
+          "piece_type": {"type": "string"},
+          "prompt": {"type": "string"},
+          "color": {"type": "string", "default": "white"}
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error_code": {"type": "string"},
+          "message": {"type": "string"},
+          "details": {"type": "object", "nullable": true}
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "sessionAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Session-ID"
+      }
+    }
+  }
+}

@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
-from app.db.supabase_store import store
+from app.db import store
 from app.models.chat_models import SendMessageRequest
 
 logger = logging.getLogger(__name__)

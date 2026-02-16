@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from app.db.supabase_store import store
+from app.db import store
 from app.models.game_models import (
     BoardState,
     CommandRequest,
@@ -38,7 +38,7 @@ from app.services.chess_engine import ChessEngine
 from app.services.morale_calculator import MoraleCalculator
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/games", tags=["games"])
+router = APIRouter(prefix="/games", tags=["game-actions"])
 
 
 def _get_session(x_session_id: str | None) -> str:
@@ -100,7 +100,7 @@ def _build_game_response(game: dict[str, Any]) -> GameResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.post("", response_model=GameResponse)
+@router.post("", response_model=GameResponse, tags=["games"])
 async def create_game(
     request: CreateGameRequest,
     x_session_id: str | None = Header(default=None),
@@ -119,7 +119,7 @@ async def create_game(
     return response
 
 
-@router.get("/{game_id}", response_model=GameResponse)
+@router.get("/{game_id}", response_model=GameResponse, tags=["games"])
 async def get_game(game_id: str):
     """Get the current state of a game."""
     game = store.get_game(game_id)
@@ -128,7 +128,7 @@ async def get_game(game_id: str):
     return _build_game_response(game)
 
 
-@router.post("/join-by-code", response_model=GameResponse)
+@router.post("/join-by-code", response_model=GameResponse, tags=["games"])
 async def join_by_share_code(
     request: JoinGameRequest,
     x_session_id: str | None = Header(default=None),
@@ -156,7 +156,7 @@ async def join_by_share_code(
     return _build_game_response(store.get_game(game["id"]))
 
 
-@router.post("/{game_id}/join", response_model=GameResponse)
+@router.post("/{game_id}/join", response_model=GameResponse, tags=["games"])
 async def join_game(
     game_id: str,
     request: JoinGameRequest,
@@ -560,7 +560,7 @@ async def respond_to_draw(
         return {"success": True, "result": "declined"}
 
 
-@router.get("/{game_id}/moves")
+@router.get("/{game_id}/moves", tags=["games"])
 async def get_moves(game_id: str):
     """Get move history for a game."""
     moves = store.get_moves(game_id)

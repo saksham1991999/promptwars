@@ -73,6 +73,10 @@ class InMemoryGameStore:
         self._share_code_index: dict[str, str] = {}  # share_code -> game_id (O(1) lookup)
         self._pieces_by_game: dict[str, list[str]] = {}  # game_id -> [piece_ids]
         self._pieces_by_square: dict[tuple[str, str], str] = {}  # (game_id, square) -> piece_id
+    
+    async def health_check(self) -> bool:
+        """Verify the store is healthy (always true for in-memory)."""
+        return True
 
     # ---- Games ----
 

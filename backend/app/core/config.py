@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     posthog_host: str = "https://app.posthog.com"
     log_level: str = "INFO"
 
-    model_config = {"env_file": ".env", "case_sensitive": False}
+    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
 
 
 settings = Settings()

@@ -99,7 +99,7 @@ class SupabaseGameStore:
         session_id: str,
         game_mode: str = "pvai",
         template: str = "classic",
-        settings_data: dict[str, Any] | None = None,
+        settings: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Create a new game with initial pieces.
@@ -108,7 +108,7 @@ class SupabaseGameStore:
             session_id: Player session identifier
             game_mode: 'pvai' or 'pvp'
             template: Game template name
-            settings_data: Game settings (timer, surprise mode, etc.)
+            settings: Game settings (timer, surprise mode, etc.)
 
         Returns:
             Game dict with id, status, share_code, etc.
@@ -125,7 +125,7 @@ class SupabaseGameStore:
                 "white_player_id": session_id,
                 "black_player_id": "ai" if game_mode == "pvai" else None,
                 "result": None,
-                "settings": settings_data or {"surprise_mode": False, "turn_timer": None, "ai_difficulty": "medium"},
+                "settings": settings or {"surprise_mode": False, "turn_timer": None, "ai_difficulty": "medium"},
             }
 
             # Insert game

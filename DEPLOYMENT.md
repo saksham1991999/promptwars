@@ -1,6 +1,17 @@
 # Chess Alive - Production Deployment Guide
 
-Complete step-by-step guide for deploying Chess Alive to Google Cloud Run.
+Complete step-by-step guide for deploying Chess Alive to **Google Cloud Platform**.
+
+## Why Google Cloud?
+
+Chess Alive is built entirely on Google Cloud infrastructure for:
+
+- **Serverless Scaling**: Cloud Run automatically scales from 0 to thousands of instances based on demand
+- **AI/ML Native**: Seamless integration with Google Gemini for piece personalities and analysis
+- **Enterprise Security**: Secret Manager for credentials, IAM for fine-grained access control
+- **Global Reach**: Deploy to 35+ regions with automatic SSL, CDN, and DDoS protection
+- **Cost Efficiency**: Pay-per-request pricing with a generous free tier (2 million requests/month)
+- **Developer Experience**: Cloud SDK and GitHub Actions for automated CI/CD pipelines
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)
@@ -53,6 +64,12 @@ gcloud services enable run.googleapis.com
 gcloud services enable secretmanager.googleapis.com
 gcloud services enable containerregistry.googleapis.com
 gcloud services enable cloudresourcemanager.googleapis.com
+gcloud services enable storage.googleapis.com
+gcloud services enable monitoring.googleapis.com
+gcloud services enable logging.googleapis.com
+gcloud services enable cloudtrace.googleapis.com
+gcloud services enable clouderrorreporting.googleapis.com
+gcloud services enable speech.googleapis.com
 ```
 
 ### 2. Create Service Account
@@ -116,7 +133,86 @@ gcloud redis instances describe chess-alive-redis \
   --format="value(host)"
 ```
 
-### 5. Configure GitHub Secrets
+### 5. Setup Cloud Storage
+
+```bash
+# Create bucket for custom piece images and game assets
+gcloud storage buckets create gs://chess-alive-assets \
+  --location=us-central1 \
+  --uniform-bucket-level-access
+
+# Create bucket for game replays
+gcloud storage buckets create gs://chess-alive-replays \
+  --location=us-central1 \
+  --uniform-bucket-level-access
+
+# Set CORS policy for asset bucket (allow frontend access)
+cat > cors.json << 'EOF'
+[
+  {
+    "origin": ["*"],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]
+EOF
+gcloud storage buckets update gs://chess-alive-assets --cors-file=cors.json
+rm cors.json
+```
+
+### 6. Setup Cloud Monitoring & Logging
+
+```bash
+# Create custom dashboard for game metrics
+gcloud monitoring dashboards create --config-from-file="-" << 'EOF'
+{
+  "displayName": "Chess Alive Metrics",
+  "gridLayout": {
+    "columns": "2",
+    "widgets": [
+      {
+        "title": "Request Count",
+        "xyChart": {
+          "dataSets": [{
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "resource.type=\"cloud_run_revision\"",
+                "aggregation": {"alignmentPeriod": {"seconds": 60}}
+              }
+            }
+          }]
+        }
+      }
+    ]
+  }
+}
+EOF
+```
+
+### 7. Setup Cloud Trace
+
+```bash
+# Cloud Trace is automatically enabled with Cloud Run
+# No additional setup required, but ensure your application exports traces:
+# - Backend: Use OpenTelemetry Python SDK with Cloud Trace exporter
+# - Frontend: Use Cloud Trace JavaScript agent
+```
+
+### 8. Setup Speech-to-Text API (Optional)
+
+```bash
+# Enable for voice command features
+# Configure quota limits to control costs
+gcloud alpha services quota update \
+  --consumer=projects/$GCP_PROJECT_ID \
+  --service=speech.googleapis.com \
+  --metric=speech.googleapis.com/default_requests \
+  --value=1000 \
+  --force
+```
+
+### 9. Configure GitHub Secrets
 
 Add these secrets to your GitHub repository:
 - `GCP_SA_KEY` - Service account JSON key
@@ -250,6 +346,10 @@ curl -X POST https://your-backend-url/api/v1/games \
 - **PostHog**: Verify event ingestion
 - **Cloud Run**: Monitor metrics (CPU, memory, requests)
 - **Cloud Logging**: Check structured logs
+- **Cloud Monitoring**: Verify custom dashboards
+- **Cloud Trace**: Confirm trace ingestion
+- **Cloud Error Reporting**: Check error aggregation
+- **Cloud Storage**: Verify bucket access and CORS
 
 ### 3. Configure Custom Domain (Optional)
 
@@ -301,6 +401,10 @@ gcloud run services describe chess-alive-backend \
 2. p95 latency > 2 seconds for 5 minutes
 3. Memory usage > 90%
 4. Health check failures > 3 consecutive
+5. Cloud Storage quota > 80%
+6. Speech-to-Text API quota > 80%
+7. AI API latency > 5 seconds
+8. Redis connection failures > 3 in 10 minutes
 
 ---
 
@@ -461,19 +565,23 @@ gcloud run services update chess-alive-backend \
 
 ### Caching Strategy
 
-- Redis for rate limiting
-- Browser caching for static assets (1 year)
+- Redis for rate limiting and session storage
+- Cloud Storage for static assets with CDN caching
+- Browser caching for frontend assets (1 year)
 - API response caching where appropriate
+- AI response caching (5min analysis, 30min taunts)
 
 ---
 
 ## Support Contacts
 
-- **Infrastructure**: DevOps team
+- **Infrastructure**: DevOps team / Google Cloud Support
 - **Backend Issues**: Backend team
 - **Frontend Issues**: Frontend team
 - **Database**: Supabase support
-- **Monitoring**: Sentry/PostHog support
+- **Monitoring & Logging**: Google Cloud Operations Suite
+- **Error Tracking**: Sentry/PostHog support / Google Cloud Error Reporting
+- **AI Services**: Google Cloud AI/ML Support (Gemini, Speech-to-Text)
 
 ---
 

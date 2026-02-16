@@ -4,7 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>Chess Alive — AI-Powered Psychological Chess</title>
+    <meta name="description" content="Play chess where pieces have AI personalities, morale, and opinions. Command your army through a group chat interface. Powered by Google Gemini and Google Cloud." />
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GA_MEASUREMENT_ID%"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '%VITE_GA_MEASUREMENT_ID%', {
+        send_page_view: false, // We'll handle this in main.tsx
+        transport_type: 'beacon',
+        custom_map: {
+          'custom_parameter_1': 'game_mode',
+          'custom_parameter_2': 'piece_type',
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

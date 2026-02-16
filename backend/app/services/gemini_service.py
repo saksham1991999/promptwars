@@ -211,7 +211,7 @@ class GeminiService:
             from pydantic_ai import Agent
 
             self._piece_agent = Agent(
-                "google-gla:gemini-2.0-flash",
+                "google-gla:gemini-3-flash",
                 result_type=PieceResponseOutput,
                 system_prompt=(
                     "You are a chess piece with a personality. You are part of a player's army "
@@ -228,7 +228,7 @@ class GeminiService:
             )
 
             self._analysis_agent = Agent(
-                "google-gla:gemini-2.0-flash",
+                "google-gla:gemini-3-flash",
                 result_type=MoveAnalysisOutput,
                 system_prompt=(
                     "You are a chess analyst providing commentary after each move.\n"
@@ -239,7 +239,7 @@ class GeminiService:
             )
 
             self._persuasion_agent = Agent(
-                "google-gla:gemini-2.0-flash",
+                "google-gla:gemini-3-flash",
                 result_type=PersuasionOutput,
                 system_prompt=(
                     "You evaluate whether a chess piece would be convinced by a "
@@ -251,7 +251,7 @@ class GeminiService:
             )
 
             self._taunt_agent = Agent(
-                "google-gla:gemini-2.0-flash",
+                "google-gla:gemini-3-flash",
                 result_type=TauntOutput,
                 system_prompt=(
                     "You are the opponent's King in a chess game. Generate short, "
@@ -262,7 +262,7 @@ class GeminiService:
             )
 
             self._custom_piece_agent = Agent(
-                "google-gla:gemini-2.0-flash",
+                "google-gla:gemini-3-flash",
                 result_type=CustomPieceOutput,
                 system_prompt=(
                     "Generate a chess piece personality based on the user's theme.\n"

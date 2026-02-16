@@ -34,6 +34,18 @@ if (import.meta.env.VITE_POSTHOG_API_KEY) {
     });
 }
 
+// Initialize Google Analytics
+if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
+    // gtag already loaded in index.html, just track initial page view
+    if (typeof window.gtag !== 'undefined') {
+        window.gtag('event', 'page_view', {
+            page_title: document.title,
+            page_location: window.location.href,
+            page_path: window.location.pathname,
+        });
+    }
+}
+
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <ErrorBoundary>
